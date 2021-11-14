@@ -11,7 +11,7 @@
     "ethereum-waffle": "^3.1.2",
     "ethers": "^5.0.19",
     "hardhat": "^2.0.5",
-    "openzeppelin-solidity": "4.3.2",
+    "@openzeppelin/contracts": "^4.3.2",
     "pify": "^5.0.0",
     "truffle-hdwallet-provider": "^1.0.17"
   },
