@@ -1,3 +1,9 @@
+///
+/// @dev The function that works are isValid() and isPassed(). The smart contract only use these
+/// two functions transfer the data to worker. The worker implement the calculation logic of these
+/// two functions.
+///
+
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
@@ -157,11 +163,13 @@ contract KiltProofs is Ownable, Properties {
         }
     }
 
+    /// @param the function isValid's parameter is rootHash 
     function isValid(address _who, bytes32 _cType) isRegistered(_who, _cType) public view returns (bool) {
         Credential storage credential = certificate[_who][_cType];
         return credential.finalRootHash == 0x0;
     }
 
+    /// @param the function isPassed's parameter are program, output and proof
     function isPassed(
         address _who, 
         bytes32 _programHash, 
