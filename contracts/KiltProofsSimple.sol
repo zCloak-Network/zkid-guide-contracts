@@ -43,7 +43,7 @@ contract KiltProofs is Ownable, Properties {
     // contract address => cType => programHash
     mapping(address => mapping(bytes32 => bytes32)) public trustedPrograms;
    
-    event AddProof(address dataOwner, bytes32 kiltAddress, bytes32 cType, bytes32 programHash, bytes32 proofCid, bool expectResult);
+    event AddProof(address dataOwner, bytes32 kiltAddress, bytes32 cType, bytes32 programHash, bytes32 proofCid, bytes32 rootHash, bool expectResult);
     event AddVerification(address dataOwner, address worker, bool isRevoked, bool isPassed);
    
 
@@ -70,9 +70,10 @@ contract KiltProofs is Ownable, Properties {
         bytes memory _fieldName,
         bytes32 _programHash, 
         bytes32 _proofCid,
+        bytes32 _rootHash,
         bool _expectResult
     ) public {
-        _addProof(msg.sender, _kiltAddress, _cType, _fieldName, _programHash, _proofCid, _expectResult);
+        _addProof(msg.sender, _kiltAddress, _cType, _fieldName, _programHash, _proofCid, _rootHash, _expectResult);
     }
 
     function addVerification(
@@ -95,6 +96,7 @@ contract KiltProofs is Ownable, Properties {
         bytes memory _fieldName,
         bytes32 _programHash, 
         bytes32 _proofCid,
+        bytes32 _rootHash,
         bool _result
     ) internal {
         require(_result == expectedResult[_cType][_programHash], "not qualified.");
@@ -106,7 +108,7 @@ contract KiltProofs is Ownable, Properties {
         Credential storage credential =  certificate[_user][_cType];
         credential.kiltAddress = _kiltAddress;
 
-        emit AddProof(_user, _kiltAddress, _cType, _programHash, _proofCid, _result);
+        emit AddProof(_user, _kiltAddress, _cType, _programHash, _proofCid, _rootHash, _result);
     }
 
 
