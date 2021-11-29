@@ -19,8 +19,8 @@ contract KiltProofs is Ownable, Properties {
 
     struct StarkProof {
         address owner;
-        bytes fieldName;
-        bytes32 proofCid;
+        string fieldName;
+        string proofCid;
         mapping(bool => uint256) approveCount;
         bool isPassed;
     }
@@ -43,7 +43,7 @@ contract KiltProofs is Ownable, Properties {
     // contract address => cType => programHash
     mapping(address => mapping(bytes32 => bytes32)) public trustedPrograms;
    
-    event AddProof(address dataOwner, bytes32 kiltAddress, bytes32 cType, bytes32 programHash, bytes32 proofCid, bytes32 rootHash, bool expectResult);
+    event AddProof(address dataOwner, bytes32 kiltAddress, bytes32 cType, bytes32 programHash, string fieldName, string proofCid, bytes32 rootHash, bool expectResult);
     event AddVerification(address dataOwner, address worker, bool isRevoked, bool isPassed);
    
 
@@ -67,9 +67,9 @@ contract KiltProofs is Ownable, Properties {
     function addProof(
         bytes32 _kiltAddress, 
         bytes32 _cType,
-        bytes memory _fieldName,
+        string memory _fieldName,
         bytes32 _programHash, 
-        bytes32 _proofCid,
+        string memory _proofCid,
         bytes32 _rootHash,
         bool _expectResult
     ) public {
@@ -93,9 +93,9 @@ contract KiltProofs is Ownable, Properties {
         address _user,
         bytes32 _kiltAddress, 
         bytes32 _cType,
-        bytes memory _fieldName,
+        string memory _fieldName,
         bytes32 _programHash, 
-        bytes32 _proofCid,
+        string memory _proofCid,
         bytes32 _rootHash,
         bool _result
     ) internal {
@@ -108,7 +108,7 @@ contract KiltProofs is Ownable, Properties {
         Credential storage credential =  certificate[_user][_cType];
         credential.kiltAddress = _kiltAddress;
 
-        emit AddProof(_user, _kiltAddress, _cType, _programHash, _proofCid, _rootHash, _result);
+        emit AddProof(_user, _kiltAddress, _cType, _programHash, _fieldName, _proofCid, _rootHash, _result);
     }
 
 
