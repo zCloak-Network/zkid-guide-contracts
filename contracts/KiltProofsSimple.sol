@@ -19,8 +19,8 @@ contract KiltProofs is Ownable, Properties {
 
     struct StarkProof {
         address owner;
-        bytes32 fieldName;
-        bytes32 proofCid;
+        string fieldName;
+        string proofCid;
         mapping(bool => uint256) approveCount;
         bool isPassed;
     }
@@ -32,14 +32,18 @@ contract KiltProofs is Ownable, Properties {
     // address => cType => Credential
     mapping(address => mapping(bytes32 => Credential)) public certificate;
 
-    // address => (programHash => (cType => StarkProof)))
+    // address => (cType => (programHash => StarkProof)))
     mapping(address => mapping(bytes32 => mapping(bytes32 => StarkProof))) public proofs;
+
+    // expected output
+    // cType => programHash => expectedResult
+    mapping(bytes32 => mapping(bytes32 => bool)) expectedResult;
 
     // For third parties
     // contract address => cType => programHash
     mapping(address => mapping(bytes32 => bytes32)) public trustedPrograms;
    
-    event AddProof(address dataOwner, bytes32 kiltAddress, bytes32 cType, bytes32 programHash, bytes32 proofCid, bool expectResult);
+    event AddProof(address dataOwner, bytes32 kiltAddress, bytes32 cType, bytes32 programHash, string fieldName, string proofCid, bytes32 rootHash, bool expectResult);
     event AddVerification(address dataOwner, address worker, bool isRevoked, bool isPassed);
    
 
@@ -63,24 +67,24 @@ contract KiltProofs is Ownable, Properties {
     function addProof(
         bytes32 _kiltAddress, 
         bytes32 _cType,
-        bytes32 _fieldName,
+        string memory _fieldName,
         bytes32 _programHash, 
-        bytes32 _proofCid,
+        string memory _proofCid,
+        bytes32 _rootHash,
         bool _expectResult
     ) public {
-        _addProof(msg.sender, _kiltAddress, _cType, _fieldName, _programHash, _proofCid, _expectResult);
+        _addProof(msg.sender, _kiltAddress, _cType, _fieldName, _programHash, _proofCid, _rootHash, _expectResult);
     }
 
     function addVerification(
         address _dataOwner,  
         bytes32 _rootHash,
         bytes32 _cType,
-        bytes32 _fieldName,
         bytes32 _programHash,
         bool _isValid, // data validity
         bool _isPassed // proof verification result
     ) public isWorker(msg.sender) {
-        _addVerification(_dataOwner, _rootHash, _cType, _fieldName, _programHash, _isValid, _isPassed);
+        _addVerification(_dataOwner, _rootHash, _cType, _programHash, _isValid, _isPassed);
     }
 
    
@@ -89,13 +93,14 @@ contract KiltProofs is Ownable, Properties {
         address _user,
         bytes32 _kiltAddress, 
         bytes32 _cType,
-        bytes32 _fieldName,
+        string memory _fieldName,
         bytes32 _programHash, 
-        bytes32 _proofCid,
-        bool _expectResult
+        string memory _proofCid,
+        bytes32 _rootHash,
+        bool _result
     ) internal {
-        
-        StarkProof storage proof = proofs[_user][_programHash][_cType];
+        require(_result == expectedResult[_cType][_programHash], "not qualified.");
+        StarkProof storage proof = proofs[_user][_cType][_programHash];
         proof.fieldName = _fieldName;
         proof.owner = _user;
         proof.proofCid = _proofCid;
@@ -103,7 +108,7 @@ contract KiltProofs is Ownable, Properties {
         Credential storage credential =  certificate[_user][_cType];
         credential.kiltAddress = _kiltAddress;
 
-        emit AddProof(_user, _kiltAddress, _cType, _programHash, _proofCid, _expectResult);
+        emit AddProof(_user, _kiltAddress, _cType, _programHash, _fieldName, _proofCid, _rootHash, _result);
     }
 
 
@@ -113,7 +118,6 @@ contract KiltProofs is Ownable, Properties {
         address _dataOwner,  
         bytes32 _rootHash,
         bytes32 _cType,
-        bytes32 _fieldName,
         bytes32 _programHash,
         bool _isValid, // data validity
         bool _isPassed // proof verification result
@@ -125,7 +129,7 @@ contract KiltProofs is Ownable, Properties {
         Credential storage credential = certificate[_dataOwner][_cType];
         // successfully finalized the validity if true
         _apporveCredential(credential, _rootHash);
-        StarkProof storage proof = proofs[_dataOwner][_programHash][_fieldName];
+        StarkProof storage proof = proofs[_dataOwner][_cType][_programHash];
         _approveStarkProof(proof, _isPassed);
         
         emit AddVerification(_dataOwner, msg.sender, _isValid, _isPassed);
@@ -168,7 +172,7 @@ contract KiltProofs is Ownable, Properties {
         bytes32 _cType
     ) isRegistered(_who, _cType) public view returns (bool) {
     
-        StarkProof storage proof = proofs[_who][_programHash][_cType];
+        StarkProof storage proof = proofs[_who][_cType][_programHash];
         return proof.isPassed;
     }
 
