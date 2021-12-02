@@ -23,6 +23,7 @@ contract KiltProofsV1 is AccessControl, Properties {
         string fieldName;
         string proofCid;
         mapping(bool => uint256) approveCount;
+        bool isFinal; // has reached the final result or not
         bool isPassed;
     }
 
@@ -45,11 +46,14 @@ contract KiltProofsV1 is AccessControl, Properties {
     mapping(address => mapping(bytes32 => bytes32)) public trustedPrograms;
    
     event AddProof(address dataOwner, bytes32 kiltAddress, bytes32 cType, bytes32 programHash, string fieldName, string proofCid, bytes32 rootHash, bool expectResult);
-    event AddVerification(address dataOwner, address worker, bool isRevoked, bool isPassed);
+    event AddVerification(address dataOwner, address worker, bytes32 rootHash, bool isPassed);
+    event FinalCredential(address dataowner, bytes32 cType, bytes32 rootHash);
+    event VerificationDone(address dataOwner, bytes32 cType, bytes32 programHash, bool isPassed);
     event RegisterService(address consumer, bytes32 cType, bytes32 programHash, bool expectedResult);
 
     constructor(IRegistry _registry) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setRoleAdmin(REGULATED_ERC20, DEFAULT_ADMIN_ROLE);
         registry = _registry;
     }
 
@@ -83,10 +87,9 @@ contract KiltProofsV1 is AccessControl, Properties {
         bytes32 _rootHash,
         bytes32 _cType,
         bytes32 _programHash,
-        bool _isValid, // data validity
         bool _isPassed // proof verification result
     ) public isWorker(msg.sender) {
-        _addVerification(_dataOwner, _rootHash, _cType, _programHash, _isValid, _isPassed);
+        _addVerification(_dataOwner, _rootHash, _cType, _programHash, _isPassed);
     }
 
    
@@ -121,23 +124,21 @@ contract KiltProofsV1 is AccessControl, Properties {
         bytes32 _rootHash,
         bytes32 _cType,
         bytes32 _programHash,
-        bool _isValid, // data validity
         bool _isPassed // proof verification result
     ) internal {
-        if (!_isValid) {
-            return;
-        }
 
         Credential storage credential = certificate[_dataOwner][_cType];
         // successfully finalized the validity if true
-        _apporveCredential(credential, _rootHash);
+        _apporveCredential(_dataOwner, _cType, credential, _rootHash);
         StarkProof storage proof = proofs[_dataOwner][_cType][_programHash];
-        _approveStarkProof(proof, _isPassed);
+        _approveStarkProof(_cType, _programHash, proof, _isPassed);
         
-        emit AddVerification(_dataOwner, msg.sender, _isValid, _isPassed);
+        emit AddVerification(_dataOwner, msg.sender, _rootHash, _isPassed);
     }
 
     function _apporveCredential(
+        address _dataOwner,
+        bytes32 _cType,
         Credential storage _credential, 
         bytes32 _rootHash
     ) internal returns (bool) {
@@ -146,26 +147,31 @@ contract KiltProofsV1 is AccessControl, Properties {
         _credential.approvedRootHash[_rootHash]++;
         if (_credential.approvedRootHash[_rootHash] >= threshold) {
             _credential.finalRootHash = _rootHash;
+            emit FinalCredential(_dataOwner, _cType, _rootHash);
             return true;
         }
         return false;
     }
 
     function _approveStarkProof(
+        bytes32 _cType,
+        bytes32 _programHash,
         StarkProof storage _proof, 
-        bool _res
+        bool _isPassed
     ) internal {
          uint threshold = registry.uintOf(Properties.UINT_APPROVE_THRESHOLD);
-        _proof.approveCount[_res]++;
-        if (_proof.approveCount[_res] >= threshold) {
+        _proof.approveCount[_isPassed]++;
+        if (_proof.approveCount[_isPassed] >= threshold) {
             // reach the threshold AND proof is verified true
-            _proof.isPassed = _res && true;
+            _proof.isFinal = true;
+            _proof.isPassed = _isPassed;
+            emit VerificationDone(_proof.owner, _cType, _programHash, _isPassed);
         }
     }
 
     function isValid(address _who, bytes32 _cType) isRegistered(_who, _cType) public view returns (bool) {
         Credential storage credential = certificate[_who][_cType];
-        return credential.finalRootHash == 0x0;
+        return credential.finalRootHash == NULL;
     }
 
     function isPassed(
@@ -175,7 +181,7 @@ contract KiltProofsV1 is AccessControl, Properties {
     ) isRegistered(_who, _cType) public view returns (bool) {
     
         StarkProof storage proof = proofs[_who][_cType][_programHash];
-        return proof.isPassed;
+        return proof.isPassed && proof.isFinal;
     }
 
     function addService(
