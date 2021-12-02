@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./interfaces/IRegistry.sol";
 import "./Properties.sol";
 import "./interfaces/IWorker.sol";
 
-contract KiltProofs is Ownable, Properties {
+contract KiltProofsV1 is AccessControl, Properties {
 
     bytes32 public constant NULL = "";
+    bytes32 public constant REGULATED_ERC20 = "REGULATED_ERC20";
     
     struct Credential {
         bytes32 kiltAddress;
@@ -45,9 +46,10 @@ contract KiltProofs is Ownable, Properties {
    
     event AddProof(address dataOwner, bytes32 kiltAddress, bytes32 cType, bytes32 programHash, string fieldName, string proofCid, bytes32 rootHash, bool expectResult);
     event AddVerification(address dataOwner, address worker, bool isRevoked, bool isPassed);
-   
+    event RegisterService(address consumer, bytes32 cType, bytes32 programHash, bool expectedResult);
 
     constructor(IRegistry _registry) {
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         registry = _registry;
     }
 
@@ -176,8 +178,16 @@ contract KiltProofs is Ownable, Properties {
         return proof.isPassed;
     }
 
-    function addService(address _project, bytes32 _programHash, bytes32 _cType) onlyOwner public {
+    function addService(
+        address _project, 
+        bytes32 _cType,
+        bytes32 _programHash, 
+        bool _expectedResult
+        ) onlyRole(REGULATED_ERC20) public returns (bool) {
         trustedPrograms[_project][_cType] = _programHash;
-    }
+        expectedResult[_cType][_programHash] = _expectedResult;
 
+        emit RegisterService(_project, _cType, _programHash, _expectedResult);
+        return true;
+    }
 }
