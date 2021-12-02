@@ -11,5 +11,13 @@ interface IChecker {
         bytes32 _programHash, 
         bytes32 _cType
     ) external view returns (bool);
+
+
+    function addService(
+        address _project, 
+        bytes32 _cType,
+        bytes32 _programHash, 
+        bool _expectedResult
+    ) external returns (bool);
 }
 
