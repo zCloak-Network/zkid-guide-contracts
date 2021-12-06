@@ -27,24 +27,25 @@ contract KiltProofsV1 is AccessControl, Properties {
         bool isPassed;
     }
 
-    // storage
+    // registry where we query global settings
     IRegistry public registry;
 
 
     // address => cType => Credential
-    mapping(address => mapping(bytes32 => Credential)) public certificate;
+    mapping(address => mapping(bytes32 => Credential)) private certificate;
 
     // address => (cType => (programHash => StarkProof)))
-    mapping(address => mapping(bytes32 => mapping(bytes32 => StarkProof))) public proofs;
+    mapping(address => mapping(bytes32 => mapping(bytes32 => StarkProof))) private proofs;
 
     // expected output
     // cType => programHash => expectedResult
     mapping(bytes32 => mapping(bytes32 => bool)) expectedResult;
 
     // For third parties
-    // contract address => cType => programHash
+    // token address => cType => programHash
     mapping(address => mapping(bytes32 => bytes32)) public trustedPrograms;
    
+    
     event AddProof(address dataOwner, bytes32 kiltAddress, bytes32 cType, bytes32 programHash, string fieldName, string proofCid, bytes32 rootHash, bool expectResult);
     event AddVerification(address dataOwner, address worker, bytes32 rootHash, bool isPassed);
     event FinalCredential(address dataowner, bytes32 cType, bytes32 rootHash);
