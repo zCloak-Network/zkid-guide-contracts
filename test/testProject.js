@@ -21,6 +21,9 @@ describe("KiltProofsSimple Contract", function() {
     let Whitelist;
     let testWhiteList;
 
+    let RegulatedTransfer;
+    let testRegulatedTrnsfer;
+
     /// @param contractOwner the owner of contract who call the contract
     let contractOwner;
     let worker;
@@ -41,6 +44,7 @@ describe("KiltProofsSimple Contract", function() {
         Properties = await ethers.getContractFactory("Properties");
         Whitelist = await ethers.getContractFactory("Whitelist");
         KiltProofsV1 = await ethers.getContractFactory("KiltProofsV1", contractOwner);
+        RegulatedTransfer = await ethers.getContractFactory("RegulatedTransfer");
 
         testRegistry = await Registry.deploy();
         await testRegistry.deployed();
@@ -53,25 +57,29 @@ describe("KiltProofsSimple Contract", function() {
 
         testKiltProofs = await KiltProofsV1.deploy(testRegistry.address);
         await testKiltProofs.deployed();
+
+        testRegulatedTrnsfer = await RegulatedTransfer.deploy(testRegistry.address);
+        await testRegulatedTrnsfer.deployed();
+
     });
 
     ///TODO: fix the addVerification() bug
     describe("Identity & Authority", function() {
-        // it("addVerification(): should fail if cannot pass the isWorker modifier", async function() {
-        //     await testWhiteList.addWorker(worker.getAddress());
+        it("addVerification(): should fail if cannot pass the isWorker modifier", async function() {
+            await testWhiteList.addWorker(worker.getAddress());
 
-        //     try {
-        //         await testKiltProofs.addVerification(addr1.getAddress(), rootHash, cType, programHash, true);
-        //     } catch (error) {
-        //         console.log(error);
-        //     }
+            try {
+                await testKiltProofs.addVerification(addr1.getAddress(), rootHash, cType, programHash, true);
+            } catch (error) {
+                console.log(error);
+            }
             
-        // });
-
-        it("isValid(): Should fail if cannot pass the isRegistered modifier", async function() {
-            // contract address and my cType can pass my test
-            testKiltProofs.isValid(testKiltProofs.address, cType);
         });
+
+        // it("isValid(): Should fail if cannot pass the isRegistered modifier", async function() {
+        //     // contract address and my cType can pass my test
+        //     testKiltProofs.isValid(testKiltProofs.address, cType);
+        // });
 
         // it("isPassed(): Should fail if cannot pass the isRegistered modifier", async function() {
         //     testKiltProofs.isPassed(testKiltProofs.address, programHash, cType);
