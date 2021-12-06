@@ -19,7 +19,7 @@ contract RegulatedTransfer is Properties, Ownable {
 
 
     event RTransfer(address token, address from, address to, uint256 amount, bytes32 programHash);
-    event AddRule(address checker, bytes32 cType, bytes32 programHash, bool expectedResult);
+    event AddRule(address token, address checker, bytes32 cType, bytes32 programHash, bool expectedResult);
 
     constructor(address _registry) {
         registry = IRegistry(_registry);
@@ -59,21 +59,21 @@ contract RegulatedTransfer is Properties, Ownable {
 
 
     function addRule(
-        address _token,
+        address _erc20,
         address _checker,
         bytes32 _cTypeAllowed, 
         bytes32 _programAllowed, 
         bool _expectedResult
     ) onlyOwner public {
-        restriction[_token][_cTypeAllowed][_programAllowed] = _expectedResult;
+        restriction[_erc20][_cTypeAllowed][_programAllowed] = _expectedResult;
         
         if (IChecker(_checker).addService(
-            address(this), 
+            address(this), // TODO: _erc20 or address(this)??
             _cTypeAllowed, 
             _programAllowed, 
             _expectedResult)
         ) {
-            emit AddRule(_checker, _cTypeAllowed, _programAllowed, _expectedResult);
+            emit AddRule(_erc20, _checker, _cTypeAllowed, _programAllowed, _expectedResult);
         }
     }
 
