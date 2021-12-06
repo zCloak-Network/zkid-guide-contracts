@@ -26,4 +26,11 @@ module.exports = {
       },
     },
   },
+
+  networks: {
+    kovan: {
+      url: `https://kovan.infura.io/v3/4e9ee595de8f47c7b9997ce895cf6694`,
+      accounts: ["1f2408543a2e34321f989e68306888e04d45962c3463a0771240754930fd9896"]
+    }
+  }
 };
