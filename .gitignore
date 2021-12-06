@@ -8,4 +8,4 @@ typechain
 cache
 artifacts
 package-lock.json
-.DS_Store 
+**/.DS_Store 
