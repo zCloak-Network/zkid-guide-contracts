@@ -1,10 +1,10 @@
 const { ethers } = require("hardhat");
 const { Contract } = require("hardhat/internal/hardhat-network/stack-traces/model");
 
-async function main() {
+async function test() {
     //const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545/');
     //const deployer = await provider.getSigner();
-    
+
     const Registry = await ethers.getContractFactory("Registry");
     const Properties = await ethers.getContractFactory("Properties");
     const Whitelist = await ethers.getContractFactory("Whitelist");
@@ -30,19 +30,13 @@ async function main() {
     const regulatedTransfer = await RegulatedTransfer.deploy(registry.address);
     await regulatedTransfer.deployed();
 
-    export default registry;
-    export default properties;
-    export default whitelist;
-    export default kiltProofsV1;
-    export default sampleToken;
-    export default regulatedTransfer;
-
     console.log("Registry address: ", registry.address);
     console.log("Properties address: ", properties.address);
     console.log("Whitelist address: ", whitelist.address);
     console.log("KiltProofsV1 address: ", kiltProofsV1.address);
     console.log("SampleToken address: ", sampleToken.address);
     console.log("RegulatedTransfer address: ", regulatedTransfer.address);
+
 }
 
 main()

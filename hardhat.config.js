@@ -16,6 +16,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 // If you have question about secrets.json, please connect to this link:
 // https://docs.moonbeam.network/builders/interact/hardhat/
 const { privateKeyKovan, privateKeyMoonbase } = require('./secrets.json');
+//import { privateKeyKovan, privateKeyMoonbase } from "./secrets.json";
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
