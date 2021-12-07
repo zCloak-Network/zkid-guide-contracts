@@ -30,6 +30,13 @@ async function main() {
     const regulatedTransfer = await RegulatedTransfer.deploy(registry.address);
     await regulatedTransfer.deployed();
 
+    export default registry;
+    export default properties;
+    export default whitelist;
+    export default kiltProofsV1;
+    export default sampleToken;
+    export default regulatedTransfer;
+
     console.log("Registry address: ", registry.address);
     console.log("Properties address: ", properties.address);
     console.log("Whitelist address: ", whitelist.address);
