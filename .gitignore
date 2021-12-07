@@ -3,9 +3,11 @@ node_modules
 coverage
 coverage.json
 typechain
+**/.gitignore
 
 #Hardhat files
 cache
 artifacts
 package-lock.json
 **/.DS_Store 
+**/secrets.json
