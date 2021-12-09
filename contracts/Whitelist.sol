@@ -4,11 +4,12 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./interfaces/IWorker.sol";
 
-contract Whitelist is Ownable {
+contract Whitelist is Ownable, IWorker {
 
     uint256 workerCount;
-    mapping(address => bool) public isWorker;
+    mapping(address => bool) public override isWorker;
 
     event AddWorker(address worker);
 

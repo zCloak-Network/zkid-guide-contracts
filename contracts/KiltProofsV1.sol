@@ -77,6 +77,18 @@ contract KiltProofsV1 is AccessControl, Properties {
         _;
     }
 
+    // check if the proof has been set
+    function single_proof_exists(
+        address _who,
+        bytes32 _cType,
+        bytes32 _programHash
+    ) public view returns (bool) {
+        StarkProof storage proof = proofs[_who][_cType][_programHash];
+        return proof.owner == _who 
+            && bytes(proof.fieldName).length != 0
+            && bytes(proof.proofCid).length != 0;
+    }
+
     function addProof(
         bytes32 _kiltAddress, 
         bytes32 _cType,
@@ -86,6 +98,30 @@ contract KiltProofsV1 is AccessControl, Properties {
         bytes32 _rootHash,
         bool _expectResult
     ) public {
+        require(!single_proof_exists(msg.sender, _cType, _programHash));
+        _addProof(msg.sender, _kiltAddress, _cType, _fieldName, _programHash, _proofCid, _rootHash, _expectResult);
+    }
+
+    function update_proof(
+        bytes32 _kiltAddress, 
+        bytes32 _cType,
+        string memory _fieldName,
+        bytes32 _programHash, 
+        string memory _proofCid,
+        bytes32 _rootHash,
+        bool _expectResult
+    ) public {
+        require(single_proof_exists(msg.sender, _cType, _programHash));
+        StarkProof storage proof = proofs[msg.sender][_cType][_programHash];
+        if (keccak256(bytes(proof.proofCid)) != keccak256(bytes(_proofCid))) {
+            _clear_proof(proof);
+        }
+
+        Credential storage credential = certificate[msg.sender][_cType];
+        if (credential.finalRootHash != _rootHash) {
+            credential.finalRootHash = NULL;
+        }
+
         _addProof(msg.sender, _kiltAddress, _cType, _fieldName, _programHash, _proofCid, _rootHash, _expectResult);
     }
 
@@ -96,7 +132,16 @@ contract KiltProofsV1 is AccessControl, Properties {
         bytes32 _programHash,
         bool _isPassed // proof verification result
     ) public isWorker(msg.sender) {
+        require(single_proof_exists(_dataOwner, _cType, _programHash));
         _addVerification(_dataOwner, _rootHash, _cType, _programHash, _isPassed);
+    }
+
+    // clear the proof's verification status
+    function _clear_proof(StarkProof storage _proof) internal {
+        _proof.approveCount[true] = 0;
+        _proof.approveCount[false] = 0;
+        _proof.isFinal = false;
+        _proof.isPassed = false;
     }
 
    
