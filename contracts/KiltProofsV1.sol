@@ -36,6 +36,8 @@ contract KiltProofsV1 is AccessControl, Properties {
     // registry where we query global settings
     IRegistry public registry;
 
+    // user => ctype => programHash => workerAddress => rootHash
+    mapping(address => mapping(bytes32 => mapping(bytes32 => mapping(address => bytes32)))) public submissionRecords;
 
     // address => cType => Credential
     mapping(address => mapping(bytes32 => Credential)) private certificate;
@@ -133,7 +135,19 @@ contract KiltProofsV1 is AccessControl, Properties {
         bool _isPassed // proof verification result
     ) public isWorker(msg.sender) {
         require(single_proof_exists(_dataOwner, _cType, _programHash));
+        require(hasSubmitted(_dataOwner, msg.sender, _rootHash, _cType, _programHash));
         _addVerification(_dataOwner, _rootHash, _cType, _programHash, _isPassed);
+    }
+
+
+    function hasSubmitted(
+        address _dataOwner,  
+        address _worker,
+        bytes32 _rootHash,
+        bytes32 _cType,
+        bytes32 _programHash
+    ) public view returns (bool) {
+        return _rootHash == submissionRecords[_dataOwner][_cType][_programHash][_worker];  
     }
 
     // clear the proof's verification status
@@ -156,7 +170,6 @@ contract KiltProofsV1 is AccessControl, Properties {
         bytes32 _rootHash,
         bool _result
     ) internal {
-        require(_result == expectedResult[_cType][_programHash], "not qualified.");
         StarkProof storage proof = proofs[_user][_cType][_programHash];
         proof.fieldName = _fieldName;
         proof.owner = _user;
@@ -245,8 +258,7 @@ contract KiltProofsV1 is AccessControl, Properties {
         bool _expectedResult
         ) onlyRole(REGULATED_ERC20) public returns (bool) {
         trustedPrograms[_project][_cType] = _programHash;
-        expectedResult[_cType][_programHash] = _expectedResult;
-
+        
         emit RegisterService(_project, _cType, _programHash, _expectedResult);
         return true;
     }
