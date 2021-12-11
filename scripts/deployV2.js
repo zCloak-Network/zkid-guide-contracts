@@ -1,7 +1,12 @@
 const { ethers } = require("hardhat");
-const { Contract } = require("hardhat/internal/hardhat-network/stack-traces/model");
+const { deployer, provider, bytes32UINT_APPROVE_THRESHOLD } = require("./variable.js");
 
-async function test() {
+const abiRegistry = require("../artifacts/contracts/Registry.sol/Registry.json");
+const abiProperties = require("../artifacts/contracts/Properties.sol/Properties.json");
+const abiKiltProofsV1 = require("../artifacts/contracts/KiltProofsV1.sol/KiltProofsV1.json");
+const abiRegulatedTransfer = require("../artifacts/contracts/RegulatedTransferV1.sol/RegulatedTransfer.json");
+
+async function main() {
     //const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545/');
     //const deployer = await provider.getSigner();
 
@@ -37,6 +42,25 @@ async function test() {
     console.log("SampleToken address: ", sampleToken.address);
     console.log("RegulatedTransfer address: ", regulatedTransfer.address);
 
+    // const deployerSigner = await provider.getSigner(deployer);
+    // const deployerRegistry = await Registry.attach(registry.address);
+    // const deployerProperties = await Properties.attach(properties.address);
+    // const deployerKiltProofsV1 = await KiltProofsV1.attach(kiltProofsV1.address);
+    // const deployerRegulatedTransfer = await RegulatedTransfer.attach(regulatedTransfer.address);
+
+    // const deployerAccount_from = {
+    //     privateKey: '0bc365e0e28a4134f0ce5568f562e0adeeefda7edc636d443cdab3ed8a4e92fd',
+    // };
+    // let deployerWallet = await new ethers.Wallet(deployerAccount_from.privateKey, provider);
+
+
+ 
+    // /// set a threshold for _apporveCredential() and _approveStarkProof()
+    // await deployerRegistry.setUintProperty(ethers.utils.formatBytes32String("UINT_APPROVE_THRESHOLD"), 3);
+
+    // /// set workers contract whitelist
+    
+    
 }
 
 main()
