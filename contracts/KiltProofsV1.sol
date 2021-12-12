@@ -136,7 +136,7 @@ contract KiltProofsV1 is AccessControl, Properties {
     ) public isWorker(msg.sender) {
         require(single_proof_exists(_dataOwner, _cType, _programHash));
         require(hasSubmitted(_dataOwner, msg.sender, _rootHash, _cType, _programHash));
-        _addVerification(_dataOwner, _rootHash, _cType, _programHash, _isPassed);
+        _addVerification(_dataOwner, msg.sender, _rootHash, _cType, _programHash, _isPassed);
     }
 
 
@@ -186,6 +186,7 @@ contract KiltProofsV1 is AccessControl, Properties {
     // TODO: reward worker？
     function _addVerification(
         address _dataOwner,  
+        address _worker,
         bytes32 _rootHash,
         bytes32 _cType,
         bytes32 _programHash,
@@ -197,6 +198,9 @@ contract KiltProofsV1 is AccessControl, Properties {
         _apporveCredential(_dataOwner, _cType, credential, _rootHash);
         StarkProof storage proof = proofs[_dataOwner][_cType][_programHash];
         _approveStarkProof(_cType, _programHash, proof, _isPassed);
+
+        // record the submission
+        submissionRecords[_dataOwner][_cType][_programHash][_worker] = _rootHash;
         
         emit AddVerification(_dataOwner, msg.sender, _rootHash, _isPassed);
     }
