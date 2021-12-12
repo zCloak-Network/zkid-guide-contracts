@@ -68,14 +68,14 @@ contract KiltProofsV1 is AccessControl, Properties {
 
     modifier isWorker(address _worker) {
         IWorker whitelist = IWorker(registry.addressOf(Properties.CONTRACT_WHITELIST));
-        require(whitelist.isWorker(_worker));
+        require(whitelist.isWorker(_worker), "You are not worker, please check your identity first");
         _;
     }
 
     // TODO: complete this later!
     // add projects registration
     modifier isRegistered(address _who, bytes32 _cType) {
-        require(trustedPrograms[_who][_cType] != NULL);
+        require(trustedPrograms[_who][_cType] != NULL, "This is an untrusted program, please get trust first");
         _;
     }
 
@@ -100,7 +100,7 @@ contract KiltProofsV1 is AccessControl, Properties {
         bytes32 _rootHash,
         bool _expectResult
     ) public {
-        require(!single_proof_exists(msg.sender, _cType, _programHash));
+        require(!single_proof_exists(msg.sender, _cType, _programHash), "Your proof has already existed, do not add same proof again");
         _addProof(msg.sender, _kiltAddress, _cType, _fieldName, _programHash, _proofCid, _rootHash, _expectResult);
     }
 
@@ -113,7 +113,7 @@ contract KiltProofsV1 is AccessControl, Properties {
         bytes32 _rootHash,
         bool _expectResult
     ) public {
-        require(single_proof_exists(msg.sender, _cType, _programHash));
+        require(single_proof_exists(msg.sender, _cType, _programHash), "Your haven't add your proof before, please add it first");
         StarkProof storage proof = proofs[msg.sender][_cType][_programHash];
         if (keccak256(bytes(proof.proofCid)) != keccak256(bytes(_proofCid))) {
             _clear_proof(proof);
@@ -134,8 +134,8 @@ contract KiltProofsV1 is AccessControl, Properties {
         bytes32 _programHash,
         bool _isPassed // proof verification result
     ) public isWorker(msg.sender) {
-        require(single_proof_exists(_dataOwner, _cType, _programHash));
-        require(hasSubmitted(_dataOwner, msg.sender, _rootHash, _cType, _programHash));
+        require(single_proof_exists(_dataOwner, _cType, _programHash), "the Proof already exists");
+        require(!hasSubmitted(_dataOwner, msg.sender, _rootHash, _cType, _programHash), "you have already submitted");
         _addVerification(_dataOwner, msg.sender, _rootHash, _cType, _programHash, _isPassed);
     }
 
