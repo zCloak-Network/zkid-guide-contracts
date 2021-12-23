@@ -50,6 +50,12 @@ describe("KiltProofsV1 contract", function () {
         await kilt.deployed();
     });
 
+    describe("Check identity", function() {
+        it("owner should be contract deployer", async function() {
+            expect(await owner.getAddress()).to.equal(await registry.signer.getAddress());
+        });
+    });
+
     describe("User add proof", function () {
         it("user1 can add proof successfully", async function () {
 
@@ -101,14 +107,12 @@ describe("KiltProofsV1 contract", function () {
     });
 
     describe("User update proof", function () {
-        /// TODO: update_proof(): may be we can set a role.
         it("proofCid is the same twice(function _clear_proof() will be execured)", async function () {
             /// add proof first
             expect(await kilt.single_proof_exists(user1.address, cType, programHash)).to.equal(false);
             await kilt.connect(user1).addProof(kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult);
             expect(await kilt.single_proof_exists(user1.address, cType, programHash)).to.equal(true);
 
-            /// TODO: cType and programHash can not change?
             /// user1 update proof, function _clear_proof() is execured
             await kilt.connect(user1).update_proof(newKiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult);
 
