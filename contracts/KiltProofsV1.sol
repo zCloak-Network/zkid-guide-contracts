@@ -127,6 +127,7 @@ contract KiltProofsV1 is AccessControl, Properties {
         _addProof(msg.sender, _kiltAddress, _cType, _fieldName, _programHash, _proofCid, _rootHash, _expectResult);
     }
 
+    // @param _rootHash if rootHash is revoked on Kilt or does not exist on Kilt Network, this will be set to NULL
     function addVerification(
         address _dataOwner,  
         bytes32 _rootHash,
@@ -192,6 +193,10 @@ contract KiltProofsV1 is AccessControl, Properties {
         bytes32 _programHash,
         bool _isPassed // proof verification result
     ) internal {
+        // rootHash is not valid only if it is NULL
+        if (_rootHash == NULL) {
+            return;
+        }
 
         Credential storage credential = certificate[_dataOwner][_cType];
         // successfully finalized the validity if true
