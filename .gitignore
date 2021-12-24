@@ -8,7 +8,6 @@ typechain
 #Hardhat files
 cache
 artifacts
-contracts
 package-lock.json
 **/.DS_Store 
 **/secrets.json

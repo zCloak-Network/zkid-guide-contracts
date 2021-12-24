@@ -134,7 +134,7 @@ contract KiltProofsV1 is AccessControl, Properties {
         bytes32 _programHash,
         bool _isPassed // proof verification result
     ) public isWorker(msg.sender) {
-        require(single_proof_exists(_dataOwner, _cType, _programHash), "the Proof already exists");
+        require(single_proof_exists(_dataOwner, _cType, _programHash), "the Proof does not exist");
         require(!hasSubmitted(_dataOwner, msg.sender, _rootHash, _cType, _programHash), "you have already submitted");
         _addVerification(_dataOwner, msg.sender, _rootHash, _cType, _programHash, _isPassed);
     }
@@ -241,7 +241,7 @@ contract KiltProofsV1 is AccessControl, Properties {
     /// @param _who the function isValid's parameter is rootHash 
     function isValid(address _who, bytes32 _cType) public view returns (bool) {
         Credential storage credential = certificate[_who][_cType];
-        return credential.finalRootHash == NULL;
+        return credential.finalRootHash != NULL;
     }
 
     /// @param _who the function isPassed's parameter are program, output and proof
