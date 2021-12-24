@@ -3,38 +3,57 @@
 /// @dev check value
 ///
 const { ethers } = require("hardhat");
-const { user1, user2, worker1, worker2, worker3, worker4, worker5 } = require("./variable.js");
-const { addressKiltProofsV1, addressRegistry, addressWhitelist, addressProperties, addressRegulatedTransfer, addressERC20 } = require("./variable.js");
-const { deployerWallet , worker1Wallet, worker2Wallet, worker3Wallet, worker4Wallet, worker5Wallet } = require("./variable.js");
-const { rootHash, cType, programHash, isPassed, expectResult } = require("./variable.js");
-const abiKiltProofsV1 = require("../artifacts/contracts/KiltProofsV1.sol/KiltProofsV1.json");
-const abiWhitelist = require("../artifacts/contracts/Whitelist.sol/Whitelist.json");
-const abiRegistry = require("../artifacts/contracts/Registry.sol/Registry.json");
-const abiProperties = require("../artifacts/contracts/Properties.sol/Properties.json");
-const abiRegulatedTransfer = require("../artifacts/contracts/RegulatedTransferV1.sol/RegulatedTransfer.json");
+
+const addressRegistry = "CONTRACT_REGISTRY_ADDRESS";
+const addressProperties = "CONTRACT_PROPERTIES_ADDRESS";
+const addressWhitelist = "CONTRACT_WHITELIST_ADDRESS";
+const addressKilt = "CONTRACT_KILT_ADDRESS";
+const addressRegulatedTransfer = "CONTRACT_RT_ADDRESS";
+const addressSampleToken = "CONTRACT_TOKEN_ADDRESS";
+const addressERC20 = addressSampleToken;
 
 async function main() {
-    const deployerRegistry = await new ethers.Contract(addressRegistry, abiRegistry.abi, deployerWallet);
-    const deployerProperties = await new ethers.Contract(addressProperties, abiProperties.abi, deployerWallet);
-    const deployerWhitelist = await new ethers.Contract(addressWhitelist, abiWhitelist.abi, deployerWallet);
-    const deployerKiltProofsV1 = await new ethers.Contract(addressKiltProofsV1, abiKiltProofsV1.abi, deployerWallet);
-    const deployerRegulatedTransfer = await new ethers.Contract(addressRegulatedTransfer, abiRegulatedTransfer.abi, deployerWallet);
+    // create contract instance
+    // const [owner, user1, user2, worker1, worker2, worker3] = await ethers.getSigners();
+    const owner = await ethers.getSigner(0);
+    const worker1 = await ethers.getSigner(3);
+    
+    const Registry = await ethers.getContractFactory("Registry", owner);
+    const Properties = await ethers.getContractFactory("Properties", owner);
+    const Whitelist = await ethers.getContractFactory("Whitelist", owner);
+    const KiltProofsV1 = await ethers.getContractFactory("KiltProofsV1", owner);
+    const RegulatedTransfer = await ethers.getContractFactory("RegulatedTransfer", owner);
+    const SampleToken = await ethers.getContractFactory("SampleToken", owner);
 
-    // console.log("Registry CONTRACT_MAIN_KILT: ", await deployerRegistry.addressOf(deployerProperties.CONTRACT_WHITELIST));
-    // console.log("Registry CONTRACT_WHITELIST: ", await deployerRegistry.addressOf(deployerProperties.CONTRACT_WHITELIST));
-    // console.log("Registry CONTRACT_MAIN_KILT: ", await deployerRegistry.addressOf(ethers.utils.formatBytes32String("CONTRACT_MAIN_KILT")));
-    // console.log("Registry CONTRACT_WHITELIST: ", await deployerRegistry.addressOf(ethers.utils.formatBytes32String("CONTRACT_WHITELIST")));
-    // console.log("worker2 is or not? ", await deployerWhitelist.isWorker(worker2));
-    // console.log("single_proof_exists? ", await deployerKiltProofsV1.single_proof_exists(user2, cType, programHash));
-    // console.log("hasSubmitted? ", await deployerKiltProofsV1.hasSubmitted(user2, worker2, rootHash, cType, programHash));
-    console.log("Address represented by CONTRACT_WHITELIST: ", await deployerRegistry.addressOf(deployerProperties.CONTRACT_WHITELIST()));
-    console.log("is worker?", await deployerWhitelist.isWorker(worker1));
-    console.log("Address represented by CONTRACT_MAIN_KILT: ", await deployerRegistry.addressOf(deployerProperties.CONTRACT_MAIN_KILT()));
-    console.log("has role? ", await deployerKiltProofsV1.hasRole(deployerKiltProofsV1.REGULATED_ERC20(), addressRegulatedTransfer));
-    console.log("set program as trusted program? ", await deployerRegulatedTransfer.addRule(addressERC20, addressKiltProofsV1, cType, programHash, expectResult));
+    const registry = await Registry.attach(addressRegistry);
+    const properties = await Properties.attach(addressProperties);
+    const whitelist = await Whitelist.attach(addressWhitelist);
+    const kilt = await KiltProofsV1.attach(addressKilt);
+    const regulatedTransfer = await RegulatedTransfer.attach(addressRegulatedTransfer);
+    const sampleToken = await SampleToken.attach(addressSampleToken);
 
-    console.log("RegulatedTransfer has REGULATED_ERC20 role? ", await deployerKiltProofsV1.hasRole(deployerKiltProofsV1.REGULATED_ERC20(), addressRegulatedTransfer));
+    // basic conditions
+    // set up whitelist
+    // await registry.setAddressProperty(properties.CONTRACT_WHITELIST(), whitelist.address);
+    console.log("CONTRACT_WHITELIST property address: ", await registry.addressOf(properties.CONTRACT_WHITELIST()));
+    console.log("Whitelist address: ", whitelist.address);
 
+    // await whitelist.addWorker(worker1.address);
+    console.log("worker1 is worker? ", await whitelist.isWorker(worker1.address));
+    // you can add other characters as worker
+
+    // set threshold as you want, default is 1
+    // await registry.setUintProperty(properties.UINT_APPROVE_THRESHOLD(), 1);
+    console.log("UINT_APPROVE_THRESHOLD number: ", (await registry.uintOf(properties.UINT_APPROVE_THRESHOLD())).toString());
+
+    // set CONTRACT_MAIN_KILT
+    // await registry.setAddressProperty(properties.CONTRACT_MAIN_KILT(), kilt.address);
+    console.log("CONTRACT_MAIN_KILT property address: ", await registry.addressOf(properties.CONTRACT_MAIN_KILT()));
+    console.log("KiltProofsV1 address: ", kilt.address);
+
+    // grant REGULATED_ERC20 role to owner
+    // await kilt.grantRole(kilt.REGULATED_ERC20(), owner.address);
+    console.log("Owner has REGULATED_ERC20 role? ", await kilt.hasRole(kilt.REGULATED_ERC20(), owner.address));
 }
 
 main()

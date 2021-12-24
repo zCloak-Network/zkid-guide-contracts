@@ -1,40 +1,31 @@
 ///
 /// @author vsszhang
-/// @dev This script only send addVerification tx. Workers call it to verify the user's proof
+/// @dev In this script, I will show you how to add verification. Before everything
+/// starts, you need add proof first. Also, your must be a worker (your worker
+/// identity in our whitelist).
+/// @notice test network: Moonbase Alpha
 ///
 const { ethers } = require("hardhat");
-const { user1, user2, worker1, worker2, worker3, worker4, worker5 } = require("./variable.js");
-const { addressKiltProofsV1, addressRegistry, addressWhitelist } = require("./variable.js");
-const { deployerWallet , worker1Wallet, worker2Wallet, worker3Wallet, worker4Wallet, worker5Wallet } = require("./variable.js");
+
 const { rootHash, cType, programHash, isPassed } = require("./variable.js");
-const abiKiltProofsV1 = require("../artifacts/contracts/KiltProofsV1.sol/KiltProofsV1.json");
-const abiWhitelist = require("../artifacts/contracts/Whitelist.sol/Whitelist.json");
-const abiRegistry = require("../artifacts/contracts/Registry.sol/Registry.json");
+
+const addressKiltProofsV1 = "CONTRACT_KILT_ADDRESS";
 
 async function main() {
-    /// generate workers contract instance
-    const worker1KiltProofsV1 = await new ethers.Contract(addressKiltProofsV1, abiKiltProofsV1.abi, worker1Wallet);
-    const worker2KiltProofsV1 = await new ethers.Contract(addressKiltProofsV1, abiKiltProofsV1.abi, worker2Wallet);
-    const worker3KiltProofsV1 = await new ethers.Contract(addressKiltProofsV1, abiKiltProofsV1.abi, worker3Wallet);
-    // const worker4KiltProofsV1 = await new ethers.Contract(addressKiltProofsV1, abiKiltProofsV1.abi, worker4Wallet);
-    // const worker5KiltProofsV1 = await new ethers.Contract(addressKiltProofsV1, abiKiltProofsV1.abi, worker5Wallet);
+    // generate workers contract instance
+    // const [owner, user1, user2, worker1, worker2, worker3] = await ethers.getSigners();
+    const user1 = await ethers.getSigner(1);
+    const worker1 = await ethers.getSigner(3);
+    const KiltProofsV1 = await ethers.getContractFactory("KiltProofsV1", worker1);
+    const kilt = await KiltProofsV1.attach(addressKiltProofsV1);
 
-    console.log("address: ", worker2);
+    console.log("check the proof exist or not? ", await kilt.single_proof_exists(user1.address, cType, programHash));
+    console.log("worker1 has submitted verification? ", await kilt.hasSubmitted(user1.address, worker1.address, rootHash, cType, programHash));
+    const txWokerAddVerification = await kilt.addVerification(user1.address, rootHash, cType, programHash, isPassed);
+    await txWokerAddVerification.wait();
+    console.log("Successfully send the addVerification transcation.");
+    console.log("worker1 has submitted verification? ", await kilt.hasSubmitted(user1.address, worker1.address, rootHash, cType, programHash));
 
-    await worker1KiltProofsV1.addVerification(worker2, rootHash, cType, programHash, isPassed);
-    console.log("Worker1 successfully add one verification.");
-
-    await worker2KiltProofsV1.addVerification(worker2, rootHash, cType, programHash, isPassed);
-    console.log("Worker2 successfully add one verification.");
-    
-    await worker3KiltProofsV1.addVerification(worker2, rootHash, cType, programHash, isPassed);
-    console.log("Worker3 successfully add one verification.");
-
-    // await worker4KiltProofsV1.addVerification(user1, rootHash, cType, programHash, isPassed);
-    // console.log("Worker4 successfully add one verification.");
-
-    // await worker5KiltProofsV1.addVerification(user1, rootHash, cType, programHash, isPassed);
-    // console.log("Worker5 successfully add one verification.");
 }
 
 main()

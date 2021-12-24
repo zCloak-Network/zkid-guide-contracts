@@ -41,7 +41,7 @@ contract RegulatedTransfer is Properties, Ownable {
         }
 
         require(
-           !IChecker(_checker).isValid(msg.sender, _cType) &&
+            IChecker(_checker).isValid(msg.sender, _cType) &&
             IChecker(_checker).isPassed(msg.sender, _programHash, _cType),
             "Sender has not been verified"
         );

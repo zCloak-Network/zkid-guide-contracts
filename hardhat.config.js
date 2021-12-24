@@ -15,7 +15,13 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 
 // If you have question about secrets.json, please connect to this link:
 // https://docs.moonbeam.network/builders/interact/hardhat/
-const { privateKeyKovan, privateKeyMoonbase } = require('./secrets.json');
+const { privateKeyKovan,
+        privateKeyOwner,
+        privateKeyUser1,
+        privateKeyUser2,
+        privateKeyWorker1,
+        privateKeyWorker2,
+        privateKeyWorker3 } = require('./secrets.json');
 //import { privateKeyKovan, privateKeyMoonbase } from "./secrets.json";
 
 /**
@@ -39,9 +45,9 @@ module.exports = {
     },
 
     moonbase: {
-      url: 'https://rpc.testnet.moonbeam.network',
+      url: 'https://rpc.api.moonbase.moonbeam.network',
       chainId: 1287, // (hex: 0x507),
-      accounts: [privateKeyMoonbase] // Insert your private key here
+      accounts: [privateKeyOwner, privateKeyUser1, privateKeyUser2, privateKeyWorker1, privateKeyWorker2, privateKeyWorker3] // Insert your private key here
     },
 
     moonriver: {

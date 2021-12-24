@@ -1,51 +1,55 @@
 ///
 /// @author vsszhang
-/// @dev After user adds his/her proof and workers verify the proof, user1 can send
-/// sample token (ZK) to user2
+/// @dev this script shows you the rTransfer full stream, but you should know one
+/// significant thing, that is you should addProof and addVerification first.
+/// @notice test network: Moonbase Alpha
 ///
 const { ethers } = require("hardhat");
-const { user1, user2, worker2 } = require("./variable.js");
-const { user1Wallet, deployerWallet, worker2Wallet } = require("./variable.js");
-const { addressRegulatedTransfer, addressERC20, addressKiltProofsV1, addressUSDT, expectResult } = require("./variable.js");
-const { unit, cType, programHash } = require("./variable.js");
-const abiRegistry = require("../artifacts/contracts/Registry.sol/Registry.json");
-const abiProperties = require("../artifacts/contracts/Properties.sol/Properties.json");
-const abiKiltProofsV1 = require("../artifacts/contracts/KiltProofsV1.sol/KiltProofsV1.json");
-const abiRegulatedTransfer = require("../artifacts/contracts/RegulatedTransferV1.sol/RegulatedTransfer.json");
-const abiWhitelist = require("../artifacts/contracts/Whitelist.sol/Whitelist.json");
-const abiSampleToken = require("../artifacts/contracts/SampleToken.sol/SampleToken.json");
+
+const { cType, programHash, expectResult } = require("./variable.js");
+
+const addressRT = "CONTRACT_RT_ADDRESS";
+const addressKilt = "CONTRACT_KILT_ADDRESS";
+const addressSampleToken = "CONTRACT_TOKEN_ADDRESS";
 
 async function main() {
-    /// contract instance
-    // const deployerProperties = await new ethers.Contract(properties.address, abiProperties.abi, deployerWallet);
-    // const deployerKiltProofsV1 = await new ethers.Contract(whitelist.address, abiKiltProofsV1.abi, deployerWallet);
-    const deployerRegulatedTransfer = await new ethers.Contract(addressRegulatedTransfer, abiRegulatedTransfer.abi, deployerWallet);
-    // const deployerRegistry = await new ethers.Contract(registry.address, abiRegistry.abi, deployerWallet);
-    // const deployerWhitelist = await new ethers.Contract(whitelist.address, abiWhitelist.abi, deployerWallet);
+    // generate contract instance
+    const [ owner, user1, user2 ] = await ethers.getSigners();
+    const Token = await ethers.getContractFactory("SampleToken", owner);
+    const token = await Token.attach(addressSampleToken);
 
-    // await deployerRegistry.setAddressProperty(deployerProperties.CONTRACT_MAIN_KILT(), kiltProofsV1.address);
-    // console.log("CONTRACT_MAIN_KILT address: ", await deployerRegistry.addressOf(deployerProperties.CONTRACT_MAIN_KILT()));
+    const RegulatedTransfer = await ethers.getContractFactory("RegulatedTransfer", owner);
+    const rt = await RegulatedTransfer.attach(addressRT);
 
-    // await deployerKiltProofsV1.grantRole(deployerKiltProofsV1.REGULATED_ERC20(), regulatedTransfer.address);
-    // console.log("RegulatedTransfer has REGULATED_ERC20 role? ", deployerKiltProofsV1.hasRole(deployerKiltProofsV1.REGULATED_ERC20(), regulatedTransfer.address));
+    // firstly, owner transfer 20 tokens to user1
+    console.log("owner's balance: " + await ethers.utils.formatEther(await ethers.BigNumber.from(await token.balanceOf(owner.address))) + " TOKEN");
+    console.log("Waiting for owner transfers 20 tokens to user1...");
+    await (await token.transfer(user1.address, ethers.utils.parseEther("20.0"))).wait();
+    console.log("Transfer Successfully");
+    console.log("owner's balance: " + await ethers.utils.formatEther(await ethers.BigNumber.from(await token.balanceOf(owner.address))) + " TOKEN");
 
-    // await deployerRegulatedTransfer.addRule(addressERC20, addressKiltProofsV1, cType, programHash, expectResult);
-    // console.log("Successfully add new rule for third party.");
+    console.log("User1 approve 10 tokens to contract 'RegulatedTransfer'...");
+    await (await token.connect(user1).approve(rt.address, ethers.utils.parseEther("10.0"))).wait();
 
-    // let ERC20Fac = await ethers.getContractFactory("SampleToken");
-    // let erc20 = await ERC20Fac.attach(addressERC20);
-    const ERC20 = await new ethers.Contract(addressERC20, abiSampleToken.abi, worker2Wallet);
-    let balance = await ERC20.balanceOf(worker2);
-    console.log("worker2 balance is: {}", balance);
+    // show allowance and balance
+    console.log("Contract RegulatedTransfer allowance: ", await ethers.utils.formatEther(await ethers.BigNumber.from(await token.allowance(user1.address, rt.address))) + " TOKEN");
+    console.log("User1's balance: " + await ethers.utils.formatEther(await ethers.BigNumber.from(await token.balanceOf(user1.address))) + " TOKEN");
+    console.log("User2's balance: " + await ethers.utils.formatEther(await ethers.BigNumber.from(await token.balanceOf(user2.address))) + " TOKEN");
 
-    // await ERC20.approve(addressRegulatedTransfer, 10000000000);
-    console.log("allowance is: ", ERC20.allowance(worker2, addressRegulatedTransfer));
+    // add kiltProof into our trusted program
+    await (await rt.addRule(addressSampleToken, addressKilt, cType, programHash, expectResult)).wait();
 
-    /// generate user1's contract instance
-    const RegulatedTransfer = await new ethers.Contract(addressRegulatedTransfer, abiRegulatedTransfer.abi, worker2Wallet);
+    // contract RegulatedTransfer will transfer user1's 5 tokens to user2
+    var transferAmount = await ethers.utils.parseEther("5.0");
+    const txRTransfer = await rt.connect(user1).rTransfer(addressKilt, addressSampleToken, user2.address, transferAmount, cType, programHash);
+    await txRTransfer.wait();
+    console.log("User1 rTransfer 5 tokens to user2 Successfully");
 
-    await RegulatedTransfer.rTransfer(addressKiltProofsV1, addressERC20, user2, 1 * unit, cType, programHash);
-    console.log("User1 successfully transfer token to user2.");
+    // show allowance and balance
+    console.log("Contract RegulatedTransfer allowance: ", await ethers.utils.formatEther(await ethers.BigNumber.from(await token.allowance(user1.address, rt.address))) + " TOKEN");
+    console.log("User1's balance: " + await ethers.utils.formatEther(await ethers.BigNumber.from(await token.balanceOf(user1.address))) + " TOKEN");
+    console.log("User2's balance: " + await ethers.utils.formatEther(await ethers.BigNumber.from(await token.balanceOf(user2.address))) + " TOKEN");
+
 }
 
 main()

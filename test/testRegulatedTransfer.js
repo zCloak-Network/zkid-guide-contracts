@@ -67,7 +67,7 @@ describe("RegulatedTransferV1 contract", function() {
 
     describe("Check function", function() {
         it("owner can call addRule()", async function() {
-            /// TODO: why grant REGULATED_ERC20 role to regulatedTransfer contract?
+            // TODO: why grant REGULATED_ERC20 role to regulatedTransfer contract?
             await kilt.grantRole(kilt.REGULATED_ERC20(), regulatedTransfer.address);
             expect(await kilt.hasRole(kilt.REGULATED_ERC20(), regulatedTransfer.address)).to.equal(true);
 
@@ -76,66 +76,66 @@ describe("RegulatedTransferV1 contract", function() {
         });
 
         it("user can call rTransfer()", async function() {
-            /// @dev User1 add a StarkProof, worker1 add a verification.
-            /// set UINT_APPROVE_THRESHOLD as 1
+            // @dev User1 add a StarkProof, worker1 add a verification.
+            // set UINT_APPROVE_THRESHOLD as 1
             await registry.setUintProperty(properties.UINT_APPROVE_THRESHOLD(), 1);
             expect(await registry.uintOf(properties.UINT_APPROVE_THRESHOLD())).to.equal(1);
 
-            /// set CONTRACT_WHITELIST
+            // set CONTRACT_WHITELIST
             await registry.setAddressProperty(properties.CONTRACT_WHITELIST(), whitelist.address);
             expect(await registry.addressOf(properties.CONTRACT_WHITELIST())).to.equal(whitelist.address);
 
-            /// whitelist addWorker
+            // whitelist addWorker
             await whitelist.addWorker(worker1.address);
             expect(await whitelist.isWorker(worker1.address)).to.equal(true);
 
-            /// user1 add proof
+            // user1 add proof
             await kilt.connect(user1).addProof(kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult);
 
-            /// check whether the proof exist or not
+            // check whether the proof exist or not
             var proofExist = await kilt.single_proof_exists(user1.address, cType, programHash);
             expect(proofExist).to.equal(true);
 
-            /// check whether the worker1 has submitted or not
+            // check whether the worker1 has submitted or not
             var hasSubmitted = await kilt.hasSubmitted(user1.address, worker1.address, rootHash, cType, programHash);
             expect(hasSubmitted).to.equal(false);
 
-            /// worker1 add verification
+            // worker1 add verification
             await kilt.connect(worker1).addVerification(user1.address, rootHash, cType, programHash, isPassed);
 
-            /// @dev Owner call rTransfer(), owner will 'transferFrom' to user1
-            /// set kilt contract in our registry
+            // @dev Owner call rTransfer(), owner will 'transferFrom' to user1
+            // set kilt contract in our registry
             await registry.setAddressProperty(properties.CONTRACT_MAIN_KILT(), kilt.address);
             expect(await registry.addressOf(properties.CONTRACT_MAIN_KILT())).to.equal(kilt.address);
 
-            /// @dev owner transfers some tokens to user1, after that we will use 'rTransfer' function
-            /// to let user1 transfer some tokens to user2
+            // @dev owner transfers some tokens to user1, after that we will use 'rTransfer' function
+            // to let user1 transfer some tokens to user2
             await USDT.transfer(user1.address, ethers.utils.parseEther("20.0"));
 
-            /// user1 approve RegulatedTransfer contract to let it can use uer1's token transfer to user2
+            // user1 approve RegulatedTransfer contract to let it can use uer1's token transfer to user2
             var amount = await ethers.utils.parseEther("10.0");
             await USDT.connect(user1).approve(regulatedTransfer.address, amount);
 
-            /// contract RegulatedTransfer's allowance should be 10
+            // contract RegulatedTransfer's allowance should be 10
             expect(await USDT.connect(user1).allowance(user1.address, regulatedTransfer.address)).to.equal(amount);
 
-            /// user1's USDT token balance should be 20
+            // user1's USDT token balance should be 20
             expect(await USDT.connect(user1).balanceOf(user1.address)).to.equal(await ethers.utils.parseEther("20.0"));
 
-            /// user2's USDT token balance should be 0
+            // user2's USDT token balance should be 0
             expect(await USDT.balanceOf(user2.address)).to.equal(await ethers.utils.parseEther("0.0"));
 
-            /// contract RegulatedTransfer will transfer user1's 5 tokens to user2
+            // contract RegulatedTransfer will transfer user1's 5 tokens to user2
             var transferAmount = await ethers.utils.parseEther("5.0");
             await regulatedTransfer.connect(user1).rTransfer(kilt.address, USDT.address, user2.address, transferAmount, cType, programHash);
 
-            /// contract RegulatedTransfer's allowance should be 5
+            // contract RegulatedTransfer's allowance should be 5
             expect(await USDT.connect(user1).allowance(user1.address, regulatedTransfer.address)).to.equal(await ethers.utils.parseEther("5.0"));
 
-            /// user1's USDT token balance should be 15
+            // user1's USDT token balance should be 15
             expect(await USDT.connect(user1).balanceOf(user1.address)).to.equal(await ethers.utils.parseEther("15.0"));
 
-            /// user2's USDT token balance should be 5
+            // user2's USDT token balance should be 5
             expect(await USDT.balanceOf(user2.address)).to.equal(await ethers.utils.parseEther("5.0"));
         });
 

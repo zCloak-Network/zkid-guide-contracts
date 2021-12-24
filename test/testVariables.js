@@ -1,4 +1,4 @@
-/// data
+// data
 let fieldName = "age";
 let cType = "0x7f2ef721b292b9b7d678e9f82ab010e139600558df805bbc61a0041e60b61a18";
 let programHash = "0x8acf8f36dbd0407ced227c97f9f1bcf989c6affd32231ad56a36e9dfcd492610";
@@ -12,7 +12,7 @@ let expectResult = true;
 let isPassed = true;
 
 module.exports = {
-    /// data
+    // data
     fieldName: fieldName,
     cType: cType,
     programHash: programHash,

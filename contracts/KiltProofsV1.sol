@@ -241,7 +241,7 @@ contract KiltProofsV1 is AccessControl, Properties {
     /// @param _who the function isValid's parameter is rootHash 
     function isValid(address _who, bytes32 _cType) public view returns (bool) {
         Credential storage credential = certificate[_who][_cType];
-        return credential.finalRootHash == NULL;
+        return credential.finalRootHash != NULL;
     }
 
     /// @param _who the function isPassed's parameter are program, output and proof
