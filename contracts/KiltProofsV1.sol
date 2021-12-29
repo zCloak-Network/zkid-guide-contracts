@@ -7,15 +7,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./interfaces/IRegistry.sol";
 import "./Properties.sol";
-import "./interfaces/IWorker.sol";
+import "./AuthControl.sol";
 
-contract KiltProofsV1 is AccessControl, Properties {
+contract KiltProofsV1 is AuthControl, Properties {
 
     bytes32 public constant NULL = "";
-    bytes32 public constant REGULATED_ERC20 = "REGULATED_ERC20";
     
     struct Credential {
         bytes32 kiltAddress;
@@ -49,12 +47,7 @@ contract KiltProofsV1 is AccessControl, Properties {
 
     // expected output
     // cType => programHash => expectedResult
-    mapping(bytes32 => mapping(bytes32 => bool)) expectedResult;
-
-    // For third parties
-    // token address => cType => programHash
-    mapping(address => mapping(bytes32 => bytes32)) public trustedPrograms;
-   
+    mapping(bytes32 => mapping(bytes32 => bool)) expectedResult;   
     
     event AddProof(address dataOwner, bytes32 kiltAddress, bytes32 cType, bytes32 programHash, string fieldName, string proofCid, bytes32 rootHash, bool expectResult);
     event AddVerification(address dataOwner, address worker, bytes32 rootHash, bool isPassed);
@@ -63,22 +56,7 @@ contract KiltProofsV1 is AccessControl, Properties {
     event RegisterService(address consumer, bytes32 cType, bytes32 programHash, bool expectedResult);
 
     constructor(IRegistry _registry) {
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setRoleAdmin(REGULATED_ERC20, DEFAULT_ADMIN_ROLE);
         registry = _registry;
-    }
-
-    modifier isWorker(address _worker) {
-        IWorker whitelist = IWorker(registry.addressOf(Properties.CONTRACT_WHITELIST));
-        require(whitelist.isWorker(_worker), "You are not worker, please check your identity first");
-        _;
-    }
-
-    // TODO: complete this later!
-    // add projects registration
-    modifier isRegistered(address _who, bytes32 _cType) {
-        require(trustedPrograms[_who][_cType] != NULL, "This is an untrusted program, please get trust first");
-        _;
     }
 
     // check if the proof has been set
@@ -136,7 +114,7 @@ contract KiltProofsV1 is AccessControl, Properties {
         bytes32 _cType,
         bytes32 _programHash,
         bool _isPassed // proof verification result
-    ) public isWorker(msg.sender) {
+    ) public auth() {
         require(single_proof_exists(_dataOwner, _cType, _programHash), "the Proof does not exist");
         require(!hasSubmitted(_dataOwner, msg.sender, _rootHash, _cType, _programHash), "you have already submitted");
         _addVerification(_dataOwner, msg.sender, _rootHash, _cType, _programHash, _isPassed);
@@ -212,6 +190,7 @@ contract KiltProofsV1 is AccessControl, Properties {
         emit AddVerification(_dataOwner, msg.sender, _rootHash, _isPassed);
     }
 
+    // TODO: meaning of return value??
     function _apporveCredential(
         address _dataOwner,
         bytes32 _cType,
@@ -246,7 +225,7 @@ contract KiltProofsV1 is AccessControl, Properties {
     }
 
     /// @param _who the function isValid's parameter is rootHash 
-    function isValid(address _who, bytes32 _cType) public view returns (bool) {
+    function isValid(address _who, bytes32 _cType) auth() public view returns (bool) {
         Credential storage credential = certificate[_who][_cType];
         return credential.finalRootHash != NULL;
     }
@@ -254,23 +233,10 @@ contract KiltProofsV1 is AccessControl, Properties {
     /// @param _who the function isPassed's parameter are program, output and proof
     function isPassed(
         address _who, 
-        bytes32 _programHash, 
-        bytes32 _cType
-    ) public view returns (bool) {
-    
+        bytes32 _cType,
+        bytes32 _programHash
+    ) auth() public view returns (bool) {
         StarkProof storage proof = proofs[_who][_cType][_programHash];
         return proof.isPassed && proof.isFinal;
-    }
-
-    function addService(
-        address _project, 
-        bytes32 _cType,
-        bytes32 _programHash, 
-        bool _expectedResult
-        ) onlyRole(REGULATED_ERC20) public returns (bool) {
-        trustedPrograms[_project][_cType] = _programHash;
-        
-        emit RegisterService(_project, _cType, _programHash, _expectedResult);
-        return true;
     }
 }
