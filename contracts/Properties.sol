@@ -7,12 +7,17 @@ contract Properties {
 
     // address
     bytes32 public constant CONTRACT_MAIN_KILT = "CONTRACT_MAIN_KILT";
+    // address of whitelist which a registry book for workers
     bytes32 public constant CONTRACT_WHITELIST = "CONTRACT_WHITELIST";
-    bytes32 public constant CONTRACT_ACCESS = "CONTRACT_ACCESS"; 
+    // address of oracle contract
+    bytes32 public constant CONTRACT_ORACLE = "CONTRACT_ORACLE"; 
 
     // uint256
     bytes32 public constant UINT_APPROVE_THRESHOLD = "UINT_APPROVE_THRESHOLD";
     bytes32 public constant UINT_MAX_TRUSTED_PROVIDERS = "UINT_MAX_TRUSTED_PROVIDERS";
-    // for Kilt
-    bytes32 public constant UINT_MAX_KILT_CTYPES = "UINT_MAX_TRUSTED_CTYPES";
+
+
+    // bytes32
+    // the role that can read KiltProofsV1 storage
+    bytes32 public constant ROLE_ACCESS = "ROLE_ACCESS";
 }
