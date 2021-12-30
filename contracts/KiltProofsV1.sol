@@ -8,10 +8,11 @@
 pragma solidity ^0.8.0;
 
 import "./interfaces/IRegistry.sol";
-import "./Properties.sol";
-import "./AuthControl.sol";
+import "./interfaces/IRawChecker.sol";
+import "./common/Properties.sol";
+import "./common/AuthControl.sol";
 
-contract KiltProofsV1 is AuthControl, Properties {
+contract KiltProofsV1 is AuthControl, IRawChecker, Properties {
 
     bytes32 public constant NULL = "";
     
@@ -26,9 +27,8 @@ contract KiltProofsV1 is AuthControl, Properties {
         address owner;
         string fieldName;
         string proofCid;
-        mapping(bool => uint256) approveCount;
-        bool isFinal; // has reached the final result or not
-        bool isPassed;
+        // rootHash => expectResult => votes
+        mapping(bytes32 => mapping(bool => uint256)) approveCount;
     }
 
     // registry where we query global settings
@@ -49,9 +49,6 @@ contract KiltProofsV1 is AuthControl, Properties {
     
     event AddProof(address dataOwner, bytes32 kiltAddress, bytes32 cType, bytes32 programHash, string fieldName, string proofCid, bytes32 rootHash, bool expectResult);
     event AddVerification(address dataOwner, address worker, bytes32 rootHash, bool isPassed);
-    event FinalCredential(address dataowner, bytes32 cType, bytes32 rootHash);
-    event VerificationDone(address dataOwner, bytes32 cType, bytes32 programHash, bool isPassed);
-    event RegisterService(address consumer, bytes32 cType, bytes32 programHash, bool expectedResult);
 
     constructor(IRegistry _registry) {
         registry = _registry;
@@ -94,7 +91,7 @@ contract KiltProofsV1 is AuthControl, Properties {
         require(single_proof_exists(msg.sender, _cType, _programHash), "Your haven't add your proof before, please add it first");
         StarkProof storage proof = proofs[msg.sender][_cType][_programHash];
         if (keccak256(bytes(proof.proofCid)) != keccak256(bytes(_proofCid))) {
-            _clear_proof(proof);
+            _clear_proof(proof, _rootHash);
         }
 
         Credential storage credential = certificate[msg.sender][_cType];
@@ -130,11 +127,9 @@ contract KiltProofsV1 is AuthControl, Properties {
     }
 
     // clear the proof's verification status
-    function _clear_proof(StarkProof storage _proof) internal {
-        _proof.approveCount[true] = 0;
-        _proof.approveCount[false] = 0;
-        _proof.isFinal = false;
-        _proof.isPassed = false;
+    function _clear_proof(StarkProof storage _proof, bytes32 _rootHash) internal {
+        _proof.approveCount[_rootHash][true] = 0;
+        _proof.approveCount[_rootHash][false] = 0;
     }
 
    
@@ -178,9 +173,9 @@ contract KiltProofsV1 is AuthControl, Properties {
 
         Credential storage credential = certificate[_dataOwner][_cType];
         // successfully finalized the validity if true
-        _apporveCredential(_dataOwner, _cType, credential, _rootHash);
+        _apporveCredential(credential, _rootHash);
         StarkProof storage proof = proofs[_dataOwner][_cType][_programHash];
-        _approveStarkProof(_cType, _programHash, proof, _isPassed);
+        _approveStarkProof(proof, _rootHash, _isPassed);
 
         // record the submission
         submissionRecords[_dataOwner][_cType][_programHash][_worker] = _rootHash;
@@ -188,53 +183,50 @@ contract KiltProofsV1 is AuthControl, Properties {
         emit AddVerification(_dataOwner, msg.sender, _rootHash, _isPassed);
     }
 
-    // TODO: meaning of return value??
     function _apporveCredential(
-        address _dataOwner,
-        bytes32 _cType,
         Credential storage _credential, 
         bytes32 _rootHash
-    ) internal returns (bool) {
-
-        uint threshold = registry.uintOf(Properties.UINT_APPROVE_THRESHOLD);
+    ) internal {
         _credential.approvedRootHash[_rootHash]++;
-        if (_credential.approvedRootHash[_rootHash] >= threshold) {
+        bytes32 lastFinalRootHash = _credential.finalRootHash;
+        // initialize finalRootHash
+        if (_credential.finalRootHash == NULL) {
             _credential.finalRootHash = _rootHash;
-            emit FinalCredential(_dataOwner, _cType, _rootHash);
-            return true;
         }
-        return false;
+
+        // update finalRootHash if _rootHash owns the highest vote
+        uint lastFinalcount = _credential.approvedRootHash[lastFinalRootHash];
+        if (_rootHash != lastFinalRootHash && 
+            _credential.approvedRootHash[_rootHash] > lastFinalcount
+        ) {
+            _credential.finalRootHash = _rootHash;
+        }
     }
 
     function _approveStarkProof(
-        bytes32 _cType,
-        bytes32 _programHash,
         StarkProof storage _proof, 
+        bytes32 _rootHash,
         bool _isPassed
     ) internal {
-         uint threshold = registry.uintOf(Properties.UINT_APPROVE_THRESHOLD);
-        _proof.approveCount[_isPassed]++;
-        if (_proof.approveCount[_isPassed] >= threshold) {
-            // reach the threshold AND proof is verified true
-            _proof.isFinal = true;
-            _proof.isPassed = _isPassed;
-            emit VerificationDone(_proof.owner, _cType, _programHash, _isPassed);
-        }
+        _proof.approveCount[_rootHash][_isPassed]++;
     }
 
-    /// @param _who the function isValid's parameter is rootHash 
-    function isValid(address _who, bytes32 _cType) auth() public view returns (bool) {
+     // return finalRootHash and its votes
+    function credentialProcess(address _who, bytes32 _cType) override public view returns (bytes32, uint256) {
         Credential storage credential = certificate[_who][_cType];
-        return credential.finalRootHash != NULL;
+        bytes32 rootHash = credential.finalRootHash;
+        return (rootHash, credential.approvedRootHash[rootHash]);
     }
 
-    /// @param _who the function isPassed's parameter are program, output and proof
-    function isPassed(
+    // return verification process
+    function verificationProcess(
         address _who, 
-        bytes32 _cType,
-        bytes32 _programHash
-    ) auth() public view returns (bool) {
+        bytes32 _cType, 
+        bytes32 _programHash,
+        bytes32 _rootHash,
+        bool _expectResult
+    ) override public view returns (uint256) {
         StarkProof storage proof = proofs[_who][_cType][_programHash];
-        return proof.isPassed && proof.isFinal;
+        return proof.approveCount[_rootHash][_expectResult];
     }
 }

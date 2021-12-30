@@ -6,7 +6,7 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/IAuthority.sol";
 import "./interfaces/IRegistry.sol";
-import "./Properties.sol";
+import "./common/Properties.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract KiltProofsAuth is Ownable, IAuthority, Properties {
@@ -42,7 +42,8 @@ contract KiltProofsAuth is Ownable, IAuthority, Properties {
         return _addr == oracle;
     } 
 
-    
+    // worker can invoke addVerification
+    // Oracle can read through isPassed and isValid
      function canCall(
         address _src, address _dst, bytes4 _sig
     ) override public view returns (bool) {

@@ -11,13 +11,10 @@ contract Properties {
     bytes32 public constant CONTRACT_WHITELIST = "CONTRACT_WHITELIST";
     // address of oracle contract
     bytes32 public constant CONTRACT_ORACLE = "CONTRACT_ORACLE"; 
-
+    // the reputation record of workers
+    bytes32 public constant CONTRACT_REPUTATION = "CONTRACT_REPUTATION";
     // uint256
     bytes32 public constant UINT_APPROVE_THRESHOLD = "UINT_APPROVE_THRESHOLD";
     bytes32 public constant UINT_MAX_TRUSTED_PROVIDERS = "UINT_MAX_TRUSTED_PROVIDERS";
 
-
-    // bytes32
-    // the role that can read KiltProofsV1 storage
-    bytes32 public constant ROLE_ACCESS = "ROLE_ACCESS";
 }

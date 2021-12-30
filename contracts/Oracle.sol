@@ -2,14 +2,14 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./Properties.sol";
+import "./common/Properties.sol";
 import "./interfaces/IRegistry.sol";
-import "./interfaces/IOracle.sol";
 import "./interfaces/IChecker.sol";
+import "./interfaces/IRawChecker.sol";
 import "./utils/Addresses.sol";
 
 
-contract Oracle is Properties, Ownable, IOracle, IChecker {
+contract Oracle is Properties, Ownable, IChecker {
 
     using AddressesUtils for AddressesUtils.Addresses;
 
@@ -20,8 +20,6 @@ contract Oracle is Properties, Ownable, IOracle, IChecker {
 
     mapping(address => uint256) public customThreshold;
 
-
-    event RTransfer(address token, address from, address to, uint256 amount, bytes32 programHash);
     event AddRule(address token, address checker, bytes32 cType, bytes32 programHash, bool expectedResult);
 
     constructor(address _registry) {
@@ -54,7 +52,7 @@ contract Oracle is Properties, Ownable, IOracle, IChecker {
         return addresses.exists(_project);
     } 
 
-    function threshold(address _project) public override view returns (uint256) {
+    function threshold(address _project) public view returns (uint256) {
         uint defaultThreshold = registry.uintOf(Properties.UINT_APPROVE_THRESHOLD);
         uint cThreshold = customThreshold[_project];
         if ( cThreshold > defaultThreshold) {
@@ -64,18 +62,22 @@ contract Oracle is Properties, Ownable, IOracle, IChecker {
         }
     }
 
-    function isValid(address _who, bytes32 _cType) public view override returns (bool) {
-        IChecker proofContract = IChecker(registry.addressOf(Properties.CONTRACT_MAIN_KILT));
-        return proofContract.isValid(_who, _cType);
-    }
+    // TODO: add modifiert
+    function isValid(address _who, bytes32 _cType, bytes32 _programHash, bool _expectResult) override public view returns (bool) {
+        IRawChecker proofContract = IRawChecker(registry.addressOf(Properties.CONTRACT_MAIN_KILT));
+        (bytes32 rootHash, uint256 count) = proofContract.credentialProcess(_who, _cType); 
+        uint256 threshold = threshold(msg.sender);
+        if (count < threshold) {
+            return false;
+        }
 
-    function isPassed(
-        address _who, 
-        bytes32 _cType,
-        bytes32 _programHash
-    ) public override view returns (bool) {
-         IChecker proofContract = IChecker(registry.addressOf(Properties.CONTRACT_MAIN_KILT));
-         return proofContract.isPassed(_who, _cType, _programHash);
+        uint256 passCount = proofContract.verificationProcess(_who, _cType, _programHash, rootHash, _expectResult);
+        
+        if (passCount >= threshold) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
 }
