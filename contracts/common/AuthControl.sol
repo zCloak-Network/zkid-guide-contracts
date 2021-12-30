@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import './interfaces/IAuthority.sol';
+import '../interfaces/IAuthority.sol';
 
 contract DSAuthEvents {
     event LogSetAuthority (address indexed authority);
