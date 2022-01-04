@@ -77,9 +77,6 @@ describe("Oracle contract", function() {
         // set KiltProofsAuth as authority
         txSetAuthority = await kilt.setAuthority(kiltAuth.address);
 
-        // set custom threshold
-        await oracle.connect(project1).setCustomThreshold(project1.address, 2);
-
         // set UINT_APPROVE_THRESHOLD as 1
         await registry.setUintProperty(properties.UINT_APPROVE_THRESHOLD(), 1);
 

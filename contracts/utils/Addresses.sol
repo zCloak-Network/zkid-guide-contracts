@@ -46,7 +46,8 @@ library AddressesUtils {
 
     function exists(Addresses storage _addresses, address _addr) public view returns (bool) {
         if (_addresses.addresses.length == 0) {
-            return true;
+            // TODO: push this change
+            return false;
         } else {
              return _addresses.index[_addr] != 0 || _addresses.addresses[0] == _addr;
         }

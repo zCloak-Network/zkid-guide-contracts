@@ -78,12 +78,6 @@ contract KiltOracle is Properties, Ownable, IChecker {
         return addresses.exists(_project);
     }
 
-    // TODO: remove after testing
-    function setCustomThreshold(address _project, uint256 _num) public {
-        customThreshold[_project] = _num;
-    }
-
-    // TODO: @vsszhang need a interface to set customThreshold
     function threshold(address _project) public view returns (uint256) {
         uint defaultThreshold = registry.uintOf(Properties.UINT_APPROVE_THRESHOLD);
         uint cThreshold = customThreshold[_project];

@@ -12,6 +12,7 @@ let newKiltAddress = "0xf76edd58bd7de60dac41894c508a1522f86d4b1066e3a4cbea3ab035
 let expectResult = true;
 let isPassed_t = true;
 let isPassed_f = true;
+let customThreshold = 2;
 let blankAddress = "0x0000000000000000000000000000000000000000";
 let blankField = "";
 let blankRootHash = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -31,6 +32,7 @@ module.exports = {
     expectResult: expectResult,
     isPassed_t: isPassed_t,
     isPassed_f: isPassed_f,
+    customThreshold: customThreshold,
     blankAddress: blankAddress,
     blankField: blankField,
     blankRootHash: blankRootHash

@@ -9,6 +9,7 @@ const {
     cType,
     programHash,
     expectResult,
+    customThreshold
 } = require("./testVariables.js");
 
 describe("Library AddressesUtils", function () {
@@ -50,10 +51,10 @@ describe("Library AddressesUtils", function () {
         await oracle.deployed();
 
         // owner add all projects in addressesUtils
-        txAddRule0 = await oracle.addRule(project0.address, checker.address, cType, programHash, expectResult);
-        txAddRule1 = await oracle.addRule(project1.address, checker.address, cType, programHash, expectResult);
-        txAddRule2 = await oracle.addRule(project2.address, checker.address, cType, programHash, expectResult);
-        txAddRule3 = await oracle.addRule(project3.address, checker.address, cType, programHash, expectResult);
+        txAddRule0 = await oracle.addRule(project0.address, cType, programHash, expectResult, customThreshold);
+        txAddRule1 = await oracle.addRule(project1.address, cType, programHash, expectResult, customThreshold);
+        txAddRule2 = await oracle.addRule(project2.address, cType, programHash, expectResult, customThreshold);
+        txAddRule3 = await oracle.addRule(project3.address, cType, programHash, expectResult, customThreshold);
     });
 
     describe("Check value", function () {
@@ -61,22 +62,30 @@ describe("Library AddressesUtils", function () {
             expect(await owner.getAddress()).to.equal(await registry.signer.getAddress());
         });
 
+        it("number 2 should be set as custome threshold", async function() {
+            // custome threshold should be 2
+            expect(await oracle.connect(project0).customThreshold(project0.address)).to.equal(2);
+            expect(await oracle.connect(project1).customThreshold(project1.address)).to.equal(2);
+            expect(await oracle.connect(project2).customThreshold(project2.address)).to.equal(2);
+            expect(await oracle.connect(project3).customThreshold(project3.address)).to.equal(2);
+        });
+
         it("Should success if owner add all projects in addressesUtils", async function() {
             await expect(txAddRule0)
                 .to.emit(oracle, 'AddRule')
-                .withArgs(project0.address, checker.address, cType, programHash, expectResult);
+                .withArgs(project0.address, cType, programHash, expectResult, customThreshold);
 
             await expect(txAddRule1)
                 .to.emit(oracle, 'AddRule')
-                .withArgs(project1.address, checker.address, cType, programHash, expectResult);
+                .withArgs(project1.address, cType, programHash, expectResult, customThreshold);
 
             await expect(txAddRule2)
                 .to.emit(oracle, 'AddRule')
-                .withArgs(project2.address, checker.address, cType, programHash, expectResult);
+                .withArgs(project2.address, cType, programHash, expectResult, customThreshold);
 
             await expect(txAddRule3)
                 .to.emit(oracle, 'AddRule')
-                .withArgs(project3.address, checker.address, cType, programHash, expectResult);
+                .withArgs(project3.address, cType, programHash, expectResult, customThreshold);
         });
     });
 
