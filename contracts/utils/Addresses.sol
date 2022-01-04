@@ -45,12 +45,11 @@ library AddressesUtils {
     }
 
     function exists(Addresses storage _addresses, address _addr) public view returns (bool) {
-        // TODO: remove after testing
-        console.log("can go inside exists()");
-        console.log("_addresses.index[_addr]: ", _addresses.index[_addr]);
-        console.log("_addr: ", _addr);
-        console.log("_addresses.addresses[0]: ", _addresses.addresses[0]);
-        
-        return _addresses.index[_addr] != 0 || _addresses.addresses[0] == _addr;
+        if (_addresses.addresses.length == 0) {
+            return true;
+        } else {
+             return _addresses.index[_addr] != 0 || _addresses.addresses[0] == _addr;
+        }
+       
     }
 }
