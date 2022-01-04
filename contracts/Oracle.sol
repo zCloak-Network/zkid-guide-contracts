@@ -7,6 +7,7 @@ import "./interfaces/IRegistry.sol";
 import "./interfaces/IChecker.sol";
 import "./interfaces/IRawChecker.sol";
 import "./utils/Addresses.sol";
+import "hardhat/console.sol";
 
 
 contract Oracle is Properties, Ownable, IChecker {
@@ -31,6 +32,18 @@ contract Oracle is Properties, Ownable, IChecker {
     //     _;
     // }
 
+    // TODO: remove after testing
+    function judge(
+        uint _num,
+        address _addr,
+        bytes32 _cTypeAllowed,
+        bytes32 _programAllowed,
+        bool _expectedResult
+    ) view public returns (bool) {
+        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
+        return projects.judgeEqual(_num, _addr);
+    }
+
     function addRule(
         address _project,
         address _checker,
@@ -38,6 +51,9 @@ contract Oracle is Properties, Ownable, IChecker {
         bytes32 _programAllowed,
         bool _expectedResult
     ) onlyOwner public {
+        // TODO: who is _project and _checker?
+        // TODO: remove after testing
+        // console.log("can go inside addRule()");
         AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
         require(projects._addAddress(_project), "Fail to pass addAddress in AddressUtils");
 
@@ -45,13 +61,29 @@ contract Oracle is Properties, Ownable, IChecker {
     
     }
 
+    // TODO: remove after testing deleteAddress
+    function deleteRule(
+        address _project,
+        bytes32 _cTypeAllowed, 
+        bytes32 _programAllowed,
+        bool _expectedResult
+    ) onlyOwner public {
+        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
+        require(projects._deleteAddress(_project), "Fail to pass deleteAddress in AddressUtils");    
+    }
 
     // helper function for restriction (due to syntax limits)
     function isRegistered(bytes32 _cType, bytes32 _programHash, bool _expResult, address _project) public view returns (bool) {
         AddressesUtils.Addresses storage addresses = restriction[_cType][_programHash][_expResult];
         return addresses.exists(_project);
-    } 
+    }
 
+    // TODO: remove after testing
+    function setCustomThreshold(address _project, uint256 _num) public {
+        customThreshold[_project] = _num;
+    }
+
+    // TODO: @vsszhang need a interface to set customThreshold
     function threshold(address _project) public view returns (uint256) {
         uint defaultThreshold = registry.uintOf(Properties.UINT_APPROVE_THRESHOLD);
         uint cThreshold = customThreshold[_project];
