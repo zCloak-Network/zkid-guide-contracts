@@ -65,7 +65,7 @@ describe("KiltProofsV1 contract", function () {
         addressesUtils = await AddressesUtils.deploy();
         await addressesUtils.deployed();
 
-        const Oracle = await ethers.getContractFactory("Oracle", {
+        const Oracle = await ethers.getContractFactory("KiltOracle", {
             libraries: {
                 AddressesUtils: addressesUtils.address,
             },
@@ -217,10 +217,9 @@ describe("KiltProofsV1 contract", function () {
 
             // TODO: remove after testing
             console.log();
-            console.log("WRITE_ADD_V_SIG: ", await kiltAuth.getADD_V_SIG());
+            console.log("WRITE_ADD_V_SIG: ", await kiltAuth.WRITE_ADD_V_SIG());
             // worker1 add verification
             const txAddVerification = await kilt.connect(worker1).addVerification(user1.address, rootHash, cType, programHash, isPassed_t);
-            console.log("111");
             // check whether the worker1 has submitted or not
             var hasSubmitted = await kilt.hasSubmitted(user1.address, worker1.address, rootHash, cType, programHash);
             expect(hasSubmitted).to.equal(true);

@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-import "hardhat/console.sol";
 
 pragma solidity ^0.8.0;
 
@@ -19,10 +18,7 @@ library AddressesUtils {
     }
 
     function _addAddress(Addresses storage _addresses, address _addr) internal returns (bool) {
-        // TODO: remove after testing
-        // console.log("can go inside _addAddress()");
-        // TODO: remove after testing, hide 'require' first
-        // require(!exists(_addresses, _addr), "Already exists");
+        require(!exists(_addresses, _addr), "Already exists");
         uint length = _addresses.addresses.length;
         _addresses.addresses.push(_addr);
         _addresses.index[_addr] = length;
@@ -31,8 +27,7 @@ library AddressesUtils {
 
     // TODO: need test
     function _deleteAddress(Addresses storage _addresses, address _addr) internal returns (bool) {
-        // TODO: remove after testing, hide 'require' first
-        // require(exists(_addresses, _addr), "Does not exist");
+        require(exists(_addresses, _addr), "Does not exist");
         uint index = _addresses.index[_addr];
         uint length =  _addresses.addresses.length;
         address lastAddr = _addresses.addresses[length - 1];
@@ -46,7 +41,6 @@ library AddressesUtils {
 
     function exists(Addresses storage _addresses, address _addr) public view returns (bool) {
         if (_addresses.addresses.length == 0) {
-            // TODO: push this change
             return false;
         } else {
              return _addresses.index[_addr] != 0 || _addresses.addresses[0] == _addr;

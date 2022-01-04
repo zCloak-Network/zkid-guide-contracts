@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import '../interfaces/IAuthority.sol';
-import "hardhat/console.sol";
 
 contract DSAuthEvents {
     event LogSetAuthority (address indexed authority);
@@ -57,8 +56,6 @@ contract AuthControl is DSAuthEvents {
             return false;
         } else {
             // TODO: console.log just for testing
-            console.log("call canCall");
-            console.log("msg.sig == sig? ", msg.sig == sig);
             return authority.canCall(src, address(this), sig);
         }
     }
