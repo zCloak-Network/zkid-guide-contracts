@@ -11,9 +11,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract KiltProofsAuth is Ownable, IAuthority, Properties {
 
-    bytes4 constant WRITE_ADD_V_SIG =  bytes4(keccak256("addVerification(address,bytes32,bytes32,bytes32,bool)"));
-    bytes4 constant READ_IS_VALID_SIG = bytes4(keccak256("isValid(address,bytes32)"));
-    bytes4 constant READ_IS_PASSED_SIG = bytes4(keccak256("isPassed(address,bytes32,bytes32)"));
+    // TODO: remove after testing: add public for testing, origin has not public
+    bytes4 public constant WRITE_ADD_V_SIG =  bytes4(keccak256("addVerification(address,bytes32,bytes32,bytes32,bool)"));
+    bytes4 public constant READ_IS_VALID_SIG = bytes4(keccak256("isValid(address,bytes32)"));
+    bytes4 public constant READ_IS_PASSED_SIG = bytes4(keccak256("isPassed(address,bytes32,bytes32)"));
 
     uint256 workerCount;
 

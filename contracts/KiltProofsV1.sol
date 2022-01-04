@@ -37,11 +37,13 @@ contract KiltProofsV1 is AuthControl, IRawChecker, Properties {
     // user => ctype => programHash => workerAddress => rootHash
     mapping(address => mapping(bytes32 => mapping(bytes32 => mapping(address => bytes32)))) public submissionRecords;
 
+    // TODO: should be 'private', 'public' just for testing
     // address => cType => Credential
-    mapping(address => mapping(bytes32 => Credential)) private certificate;
+    mapping(address => mapping(bytes32 => Credential)) public certificate;
 
+    // TODO: should be 'private', 'public' just for testing
     // address => (cType => (programHash => StarkProof)))
-    mapping(address => mapping(bytes32 => mapping(bytes32 => StarkProof))) private proofs;
+    mapping(address => mapping(bytes32 => mapping(bytes32 => StarkProof))) public proofs;
 
     // expected output
     // cType => programHash => expectedResult

@@ -49,11 +49,13 @@ contract AuthControl is DSAuthEvents {
     }
 
     function isAuthorized(address src, bytes4 sig) internal view returns (bool) {
+        // TODO: console.log just for testing
         if (src == owner) {
             return true;
         } else if (authority == IAuthority(address(0))) {
             return false;
         } else {
+            // TODO: console.log just for testing
             return authority.canCall(src, address(this), sig);
         }
     }

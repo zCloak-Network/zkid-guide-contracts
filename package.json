@@ -20,5 +20,8 @@
     "hardhat": "^2.7.0",
     "web3": "^1.6.1"
   },
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "hardhat-log-remover": "^2.0.2"
+  }
 }

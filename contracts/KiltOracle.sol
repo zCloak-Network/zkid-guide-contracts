@@ -20,7 +20,9 @@ contract KiltOracle is Properties, Ownable, IChecker {
 
     mapping(address => uint256) public customThreshold;
 
+    // TODO: remove after testing: add DeleteRule event
     event AddRule(address token, bytes32 cType, bytes32 programHash, bool expectedResult, uint256 customThreshold);
+    event DeleteRule(address token, bytes32 cType, bytes32 programHash, bool expectedResult, uint256 customThreshold);
 
     constructor(address _registry) {
         registry = IRegistry(_registry);
@@ -31,6 +33,18 @@ contract KiltOracle is Properties, Ownable, IChecker {
     //     _;
     // }
 
+    // TODO: remove after testing
+    function judge(
+        uint _num,
+        address _addr,
+        bytes32 _cTypeAllowed,
+        bytes32 _programAllowed,
+        bool _expectedResult
+    ) view public returns (bool) {
+        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
+        return projects.judgeEqual(_num, _addr);
+    }
+
     function addRule(
         address _project,
         bytes32 _cTypeAllowed, 
@@ -38,6 +52,7 @@ contract KiltOracle is Properties, Ownable, IChecker {
         bool _expectedResult,
         uint256 _customThreshold
     ) onlyOwner public {
+        // TODO: remove after testing
         AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
         require(projects._addAddress(_project), "Fail to pass addAddress in AddressUtils");
         customThreshold[_project] = _customThreshold;
@@ -45,12 +60,25 @@ contract KiltOracle is Properties, Ownable, IChecker {
     
     }
 
+    // TODO: remove after testing deleteAddress
+    function deleteRule(
+        address _project,
+        bytes32 _cTypeAllowed, 
+        bytes32 _programAllowed,
+        bool _expectedResult
+    ) onlyOwner public {
+        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
+        require(projects._deleteAddress(_project), "Fail to pass deleteAddress in AddressUtils");
+        customThreshold[_project] = 0;
+        uint256 cThreshold = customThreshold[_project];
+        emit DeleteRule(_project, _cTypeAllowed, _programAllowed, _expectedResult, cThreshold);
+    }
 
     // helper function for restriction (due to syntax limits)
     function isRegistered(bytes32 _cType, bytes32 _programHash, bool _expResult, address _project) public view returns (bool) {
         AddressesUtils.Addresses storage addresses = restriction[_cType][_programHash][_expResult];
         return addresses.exists(_project);
-    } 
+    }
 
     function threshold(address _project) public view returns (uint256) {
         uint defaultThreshold = registry.uintOf(Properties.UINT_APPROVE_THRESHOLD);
