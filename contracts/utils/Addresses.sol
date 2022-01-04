@@ -31,6 +31,11 @@ library AddressesUtils {
     }
 
     function exists(Addresses storage _addresses, address _addr) public view returns (bool) {
-        return _addresses.index[_addr] != 0 || _addresses.addresses[0] == _addr;
+        if (_addresses.addresses.length == 0) {
+            return true;
+        } else {
+             return _addresses.index[_addr] != 0 || _addresses.addresses[0] == _addr;
+        }
+       
     }
 }

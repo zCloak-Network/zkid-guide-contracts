@@ -9,7 +9,7 @@ import "./interfaces/IRawChecker.sol";
 import "./utils/Addresses.sol";
 
 
-contract Oracle is Properties, Ownable, IChecker {
+contract KiltOracle is Properties, Ownable, IChecker {
 
     using AddressesUtils for AddressesUtils.Addresses;
 
@@ -20,7 +20,7 @@ contract Oracle is Properties, Ownable, IChecker {
 
     mapping(address => uint256) public customThreshold;
 
-    event AddRule(address token, address checker, bytes32 cType, bytes32 programHash, bool expectedResult);
+    event AddRule(address token, bytes32 cType, bytes32 programHash, bool expectedResult, uint256 customThreshold);
 
     constructor(address _registry) {
         registry = IRegistry(_registry);
@@ -33,15 +33,15 @@ contract Oracle is Properties, Ownable, IChecker {
 
     function addRule(
         address _project,
-        address _checker,
         bytes32 _cTypeAllowed, 
         bytes32 _programAllowed,
-        bool _expectedResult
+        bool _expectedResult,
+        uint256 _customThreshold
     ) onlyOwner public {
         AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
         require(projects._addAddress(_project), "Fail to pass addAddress in AddressUtils");
-
-        emit AddRule(_project, _checker, _cTypeAllowed, _programAllowed, _expectedResult);
+        customThreshold[_project] = _customThreshold;
+        emit AddRule(_project, _cTypeAllowed, _programAllowed, _expectedResult, _customThreshold);
     
     }
 
