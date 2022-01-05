@@ -19,7 +19,8 @@ const {
     isPassed_t,
     blankAddress,
     blankField,
-    blankRootHash
+    blankRootHash,
+    customThreshold
 } = require("./testVariables.js");
 
 describe("Oracle contract", function() {
@@ -27,7 +28,7 @@ describe("Oracle contract", function() {
     let properties;
     let kilt;
     let kiltAuth;
-    let oracle;
+    let kiltOracle;
     let addressesUtils;
 
     let owner;
@@ -66,13 +67,13 @@ describe("Oracle contract", function() {
         addressesUtils = await AddressesUtils.deploy();
         await addressesUtils.deployed();
 
-        const Oracle = await ethers.getContractFactory("Oracle", {
+        const Oracle = await ethers.getContractFactory("KiltOracle", {
             libraries: {
                 AddressesUtils: addressesUtils.address,
             },
         });
-        oracle = await Oracle.deploy(registry.address);
-        await oracle.deployed();
+        kiltOracle = await Oracle.deploy(registry.address);
+        await kiltOracle.deployed();
 
         // set KiltProofsAuth as authority
         txSetAuthority = await kilt.setAuthority(kiltAuth.address);
@@ -81,10 +82,13 @@ describe("Oracle contract", function() {
         await registry.setUintProperty(properties.UINT_APPROVE_THRESHOLD(), 1);
 
         // set contract Oracle address into CONTRACT_ORACLE registry
-        await registry.setAddressProperty(properties.CONTRACT_ORACLE(), oracle.address);
+        await registry.setAddressProperty(properties.CONTRACT_ORACLE(), kiltOracle.address);
 
         // set contract KiltProofsV1 address into CONTRACT_MAIN_KILT registry
         await registry.setAddressProperty(properties.CONTRACT_MAIN_KILT(), kilt.address);
+
+        // owner add project1 in addresses
+        await kiltOracle.addRule(project1.address, cType, programHash, expectResult, customThreshold);
 
         // user1 add proof
         await kilt.connect(user1).addProof(kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult);
@@ -117,7 +121,7 @@ describe("Oracle contract", function() {
 
         it("number 2 should be set as custome threshold", async function() {
             // custome threshold should be 2
-            expect(await oracle.connect(project1).customThreshold(project1.address)).to.equal(2);
+            expect(await kiltOracle.connect(project1).customThreshold(project1.address)).to.equal(2);
         });
 
         it("number 1 should be set in UINT_APPROVE_THRESHOLD registry", async function () {
@@ -127,7 +131,7 @@ describe("Oracle contract", function() {
 
         it("Oracle address should be added in CONTRACT_ORACLE registry", async function() {
             // Oracle address should be added in CONTRACT_ORACLE registry
-            expect(await registry.addressOf(properties.CONTRACT_ORACLE())).to.equal(oracle.address);
+            expect(await registry.addressOf(properties.CONTRACT_ORACLE())).to.equal(kiltOracle.address);
         });
 
         it("KiltProofsV1 address should be added in CONTRACT_MAIN_KILT", async function() {
@@ -152,7 +156,7 @@ describe("Oracle contract", function() {
 
     describe("Check whether contract Oracle can read proof storage or not", function() {
         it("Should pass if project1 call function isValid successfully", async function() {
-            txIsValid = await oracle.connect(project1).isValid(user1.address, cType, programHash, expectResult);
+            txIsValid = await kiltOracle.connect(project1).isValid(user1.address, cType, programHash, expectResult);
             expect(txIsValid).to.equal(true);
         });
     });
