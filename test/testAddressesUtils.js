@@ -50,6 +50,9 @@ describe("Library AddressesUtils", function () {
         kiltOracle = await Oracle.deploy(registry.address);
         await kiltOracle.deployed();
 
+        // check array length before adding address
+        assert.equal(await kiltOracle.readProjectArrayLength(cType, programHash, expectResult), 0);
+
         // owner add all projects in addressesUtils
         txAddRule0 = await kiltOracle.addRule(project0.address, cType, programHash, expectResult, customThreshold);
         txAddRule1 = await kiltOracle.addRule(project1.address, cType, programHash, expectResult, customThreshold);
@@ -107,14 +110,23 @@ describe("Library AddressesUtils", function () {
             assert.equal(await kiltOracle.judge(1, project1.address, cType, programHash, expectResult), true);
             assert.equal(await kiltOracle.judge(2, project2.address, cType, programHash, expectResult), true);
             assert.equal(await kiltOracle.judge(3, project3.address, cType, programHash, expectResult), true);
+
+            // check array length after adding address
+            assert.equal(await kiltOracle.readProjectArrayLength(cType, programHash, expectResult), 4);
         });
 
         it("should pass if delete address successfully", async function () {
+            // check array length before deleting address
+            assert.equal(await kiltOracle.readProjectArrayLength(cType, programHash, expectResult), 4);
+
             // delete project1 address first
             txDeleteRule = await kiltOracle.deleteRule(project1.address, cType, programHash, expectResult);
             await expect(txDeleteRule)
                 .to.emit(kiltOracle, 'DeleteRule')
                 .withArgs(project1.address, cType, programHash, expectResult, 0);
+            
+            // check array length after deleting address
+            assert.equal(await kiltOracle.readProjectArrayLength(cType, programHash, expectResult), 3);
 
             // check storage
             assert.equal(await kiltOracle.readAddress(0, cType, programHash, expectResult), project0.address);

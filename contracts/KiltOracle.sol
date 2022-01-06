@@ -71,6 +71,16 @@ contract KiltOracle is Properties, Ownable, IChecker {
         return projects.getIndex(_project);
     }
 
+    // TODO: remove after testing
+    function readProjectArrayLength(
+        bytes32 _cTypeAllowed,
+        bytes32 _programAllowed,
+        bool _expectedResult
+    ) view public onlyOwner returns (uint256) {
+        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
+        return projects.getArrayLength();
+    }
+
     function addRule(
         address _project,
         bytes32 _cTypeAllowed, 

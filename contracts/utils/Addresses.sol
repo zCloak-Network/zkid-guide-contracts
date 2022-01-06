@@ -27,6 +27,11 @@ library AddressesUtils {
         return _addresses.index[_project];
     }
 
+    // TODO: remove after testing
+    function getArrayLength(Addresses storage _addresses) view public returns (uint256) {
+        return _addresses.addresses.length;
+    }
+
     function _addAddress(Addresses storage _addresses, address _addr) internal returns (bool) {
         require(!exists(_addresses, _addr), "Already exists");
         uint length = _addresses.addresses.length;
