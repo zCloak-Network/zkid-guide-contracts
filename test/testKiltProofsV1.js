@@ -6,7 +6,8 @@
 const { ethers } = require("hardhat");
 const { expect, assert } = require("chai");
 
-const { kiltAddress,
+const {
+    kiltAddress,
     newKiltAddress,
     cType,
     fieldName,
@@ -17,9 +18,11 @@ const { kiltAddress,
     rootHash,
     expectResult,
     isPassed_t,
+    isPassed_f,
     blankAddress,
     blankField,
-    blankRootHash } = require("./testVariables.js");
+    blankRootHash
+} = require("./testVariables.js");
 
 describe("KiltProofsV1 contract", function () {
     let registry;
@@ -87,19 +90,19 @@ describe("KiltProofsV1 contract", function () {
 
     });
 
-    describe("Check value", function() {
-        it("owner should be contract deployer", async function() {
+    describe("Check value", function () {
+        it("owner should be contract deployer", async function () {
             expect(await owner.getAddress()).to.equal(await registry.signer.getAddress());
         });
 
-        it("KiltProofsAuth should be set as authority", async function() {
+        it("KiltProofsAuth should be set as authority", async function () {
             // should emit event LogSetAuthority if setAuthority suceessfully
             await expect(txSetAuthority)
                 .to.emit(kilt, 'LogSetAuthority')
                 .withArgs(kiltAuth.address);
         });
 
-        it("'worker1', 'worker2' and 'worker3' should be a recognized worker", async function() {
+        it("'worker1', 'worker2' and 'worker3' should be a recognized worker", async function () {
             // check all workers identity
             expect(await kiltAuth.isWorker(worker1.address)).to.equal(true);
             expect(await kiltAuth.isWorker(worker2.address)).to.equal(true);
@@ -111,12 +114,12 @@ describe("KiltProofsV1 contract", function () {
             expect(await registry.uintOf(properties.UINT_APPROVE_THRESHOLD())).to.equal(1);
         });
 
-        it("Oracle address should be added in CONTRACT_ORACLE registry", async function() {
+        it("Oracle address should be added in CONTRACT_ORACLE registry", async function () {
             // Oracle address should be added in CONTRACT_ORACLE registry
             expect(await registry.addressOf(properties.CONTRACT_ORACLE())).to.equal(oracle.address);
         });
 
-        it("KiltProofsV1 address should be added in CONTRACT_MAIN_KILT", async function() {
+        it("KiltProofsV1 address should be added in CONTRACT_MAIN_KILT", async function () {
             // KiltProofsV1 address should be added in CONTRACT_MAIN_KILT
             expect(await registry.addressOf(properties.CONTRACT_MAIN_KILT())).to.equal(kilt.address);
         });
@@ -151,52 +154,52 @@ describe("KiltProofsV1 contract", function () {
             assert.equal((await kilt.proofs(user1.address, cType, programHash)).proofCid, proofCid);
         });
 
-        // it("Should fail if user readd the same proof", async function() {
-        //     // user1 add proof first
-        //     assert.equal(await kilt.single_proof_exists(user1.address, cType, programHash), false);
-        //     await kilt.connect(user1).addProof(kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult);
-        //     assert.equal(await kilt.single_proof_exists(user1.address, cType, programHash), true);
+        it("Should fail if user readd the same proof", async function () {
+            // user1 add proof first
+            assert.equal(await kilt.single_proof_exists(user1.address, cType, programHash), false);
+            await kilt.connect(user1).addProof(kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult);
+            assert.equal(await kilt.single_proof_exists(user1.address, cType, programHash), true);
 
-        //     // check proof storage after adding proof
-        //     assert.equal((await kilt.proofs(user1.address, cType, programHash)).fieldName, fieldName);
-        //     assert.equal((await kilt.proofs(user1.address, cType, programHash)).owner, user1.address);
-        //     assert.equal((await kilt.proofs(user1.address, cType, programHash)).proofCid, proofCid);
+            // check proof storage after adding proof
+            assert.equal((await kilt.proofs(user1.address, cType, programHash)).owner, user1.address);
+            assert.equal((await kilt.proofs(user1.address, cType, programHash)).fieldName, fieldName);
+            assert.equal((await kilt.proofs(user1.address, cType, programHash)).proofCid, proofCid);
 
-        //     // addProof transaction should be reverted
-        //     await expect(kilt.connect(user1).addProof(kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult))
-        //         .to.be.revertedWith("Your proof has already existed, do not add same proof again");
+            // addProof transaction should be reverted
+            await expect(kilt.connect(user1).addProof(kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult))
+                .to.be.revertedWith("Your proof has already existed, do not add same proof again");
 
-        //     // check proof storage after first adding proof
-        //     assert.equal((await kilt.proofs(user1.address, cType, programHash)).fieldName, fieldName);
-        //     assert.equal((await kilt.proofs(user1.address, cType, programHash)).owner, user1.address);
-        //     assert.equal((await kilt.proofs(user1.address, cType, programHash)).proofCid, proofCid);
-        // });
+            // check proof storage after first adding proof
+            assert.equal((await kilt.proofs(user1.address, cType, programHash)).owner, user1.address);
+            assert.equal((await kilt.proofs(user1.address, cType, programHash)).fieldName, fieldName);
+            assert.equal((await kilt.proofs(user1.address, cType, programHash)).proofCid, proofCid);
+        });
 
-        // it("Should success if same user add an new proof with different cType or programHash", async function() {
-        //     // Take different programHash as an example
-        //     // check the function single_proof_exists()
-        //     expect(await kilt.single_proof_exists(user1.address, cType, newProgramHash)).to.equal(false);
+        it("Should success if same user add an new proof with different cType or programHash", async function () {
+            // Take different programHash as an example
+            // check the function single_proof_exists()
+            expect(await kilt.single_proof_exists(user1.address, cType, newProgramHash)).to.equal(false);
 
-        //     // check proof storage before add proof
-        //     assert.equal((await kilt.proofs(user1.address, cType, newProgramHash)).fieldName, blankField);
-        //     assert.equal((await kilt.proofs(user1.address, cType, newProgramHash)).owner, blankAddress);
-        //     assert.equal((await kilt.proofs(user1.address, cType, newProgramHash)).proofCid, blankField);
+            // check proof storage before add proof
+            assert.equal((await kilt.proofs(user1.address, cType, newProgramHash)).owner, blankAddress);
+            assert.equal((await kilt.proofs(user1.address, cType, newProgramHash)).fieldName, blankField);
+            assert.equal((await kilt.proofs(user1.address, cType, newProgramHash)).proofCid, blankField);
 
-        //     const txAddProof = await kilt.connect(user1).addProof(kiltAddress, cType, fieldName, newProgramHash, proofCid, rootHash, expectResult);
-            
-        //     // check the function single_proof_exists()
-        //     expect(await kilt.single_proof_exists(user1.address, cType, newProgramHash)).to.equal(true);
+            const txAddProof = await kilt.connect(user1).addProof(kiltAddress, cType, fieldName, newProgramHash, newProofCid, rootHash, expectResult);
 
-        //     // should emit event AddProof if add new proof successfully
-        //     await expect(txAddProof)
-        //         .to.emit(kilt.connect(user1), "AddProof")
-        //         .withArgs(user1.address, kiltAddress, cType, newProgramHash, fieldName, proofCid, rootHash, expectResult);
+            // check the function single_proof_exists()
+            expect(await kilt.single_proof_exists(user1.address, cType, newProgramHash)).to.equal(true);
 
-        //     // check proof storage after adding new proof
-        //     assert.equal((await kilt.proofs(user1.address, cType, newProgramHash)).fieldName, fieldName);
-        //     assert.equal((await kilt.proofs(user1.address, cType, newProgramHash)).owner, user1.address);
-        //     assert.equal((await kilt.proofs(user1.address, cType, newProgramHash)).proofCid, proofCid);
-        // });
+            // should emit event AddProof if add new proof successfully
+            await expect(txAddProof)
+                .to.emit(kilt.connect(user1), "AddProof")
+                .withArgs(user1.address, kiltAddress, cType, newProgramHash, fieldName, newProofCid, rootHash, expectResult);
+
+            // check proof storage after adding new proof
+            assert.equal((await kilt.proofs(user1.address, cType, newProgramHash)).owner, user1.address);
+            assert.equal((await kilt.proofs(user1.address, cType, newProgramHash)).fieldName, fieldName);
+            assert.equal((await kilt.proofs(user1.address, cType, newProgramHash)).proofCid, newProofCid);
+        });
     });
 
     describe("Worker add verification", function () {
@@ -215,9 +218,6 @@ describe("KiltProofsV1 contract", function () {
             // check finalRootHash before add verification
             assert.equal((await kilt.certificate(user1.address, cType)).finalRootHash, blankRootHash);
 
-            // TODO: remove after testing
-            console.log();
-            console.log("WRITE_ADD_V_SIG: ", await kiltAuth.WRITE_ADD_V_SIG());
             // worker1 add verification
             const txAddVerification = await kilt.connect(worker1).addVerification(user1.address, rootHash, cType, programHash, isPassed_t);
             // check whether the worker1 has submitted or not
@@ -228,74 +228,109 @@ describe("KiltProofsV1 contract", function () {
             await expect(txAddVerification)
                 .to.emit(kilt.connect(worker1), "AddVerification")
                 .withArgs(user1.address, worker1.address, rootHash, isPassed_t);
-            
+
             // check finalRootHash after adding verification
             assert.equal((await kilt.certificate(user1.address, cType)).finalRootHash, rootHash);
         });
 
-        // it("Should fail if worker readd verification", async function() {
-        //     // worker1 add proof first
-        //     assert.equal(await kilt.single_proof_exists(user1.address, cType, programHash), false);
-        //     await kilt.connect(user1).addProof(kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult);
-        //     assert.equal(await kilt.single_proof_exists(user1.address, cType, programHash), true);
-            
-        //     expect(await kilt.hasSubmitted(user1.address, worker1.address, rootHash, cType, programHash)).to.equal(false);
-        //     await kilt.connect(worker1).addVerification(user1.address, rootHash, cType, programHash, isPassed_t);
-        //     expect(await kilt.hasSubmitted(user1.address, worker1.address, rootHash, cType, programHash)).to.equal(true);
+        it("Should fail if worker readd verification", async function () {
+            // worker1 add proof first
+            assert.equal(await kilt.single_proof_exists(user1.address, cType, programHash), false);
+            await kilt.connect(user1).addProof(kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult);
+            assert.equal(await kilt.single_proof_exists(user1.address, cType, programHash), true);
 
-        //     // worker1 readd verification
-        //     // addVerification transaction should be reverted if worker1 readd verification
-        //     await expect(kilt.connect(worker1).addVerification(user1.address, rootHash, cType, programHash, isPassed_t))
-        //         .to.be.revertedWith("you have already submitted");
-        // });
+            expect(await kilt.hasSubmitted(user1.address, worker1.address, rootHash, cType, programHash)).to.equal(false);
+            await kilt.connect(worker1).addVerification(user1.address, rootHash, cType, programHash, isPassed_t);
+            expect(await kilt.hasSubmitted(user1.address, worker1.address, rootHash, cType, programHash)).to.equal(true);
 
-        // it("Should fail if worker add a verification for a non-exist proof", async function() {
-        //     // worker should not submit verification for user1's proof
-        //     expect(await kilt.hasSubmitted(user1.address, worker1.address, rootHash, cType, programHash)).to.equal(false);
+            // worker1 readd verification
+            // addVerification transaction should be reverted if worker1 readd verification
+            await expect(kilt.connect(worker1).addVerification(user1.address, rootHash, cType, programHash, isPassed_t))
+                .to.be.revertedWith("you have already submitted");
+        });
 
-        //     // addVerification transaction should be reverted if the proof do not exist in proof storage
-        //     await expect(kilt.connect(worker1).addVerification(user1.address, rootHash, cType, programHash, isPassed_t))
-        //         .to.be.revertedWith("the Proof does not exist");
-        // });
+        it("Should fail if worker add a verification for a non-exist proof", async function () {
+            // worker should not submit verification for user1's proof
+            expect(await kilt.hasSubmitted(user1.address, worker1.address, rootHash, cType, programHash)).to.equal(false);
 
-        // it("Should fail if a non-worker add verification", async function() {
-        //     // worker1 add proof first
-        //     assert.equal(await kilt.single_proof_exists(user1.address, cType, programHash), false);
-        //     await kilt.connect(user1).addProof(kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult);
-        //     assert.equal(await kilt.single_proof_exists(user1.address, cType, programHash), true);
+            // addVerification transaction should be reverted if the proof do not exist in proof storage
+            await expect(kilt.connect(worker1).addVerification(user1.address, rootHash, cType, programHash, isPassed_t))
+                .to.be.revertedWith("the Proof does not exist");
+        });
 
-        //     // addVerification transcation should be reverted if a non-worker add verification
-        //     await expect(kilt.connect(user2).addVerification(user1.address, rootHash, cType, programHash, isPassed_t))
-        //         .to.be.revertedWith("You are not worker, please check your identity first");
-        // });
+        it("Should fail if a non-worker add verification", async function () {
+            // worker1 add proof first
+            assert.equal(await kilt.single_proof_exists(user1.address, cType, programHash), false);
+            await kilt.connect(user1).addProof(kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult);
+            assert.equal(await kilt.single_proof_exists(user1.address, cType, programHash), true);
+
+            // addVerification transcation should be reverted if a non-worker add verification
+            await expect(kilt.connect(user2).addVerification(user1.address, rootHash, cType, programHash, isPassed_t))
+                .to.be.revertedWith("Auth: you can not pass authorization verification");
+        });
     });
 
-    // describe("User update proof", function () {
-    //     it("proofCid is the same twice(function _clear_proof() will be execured)", async function () {
-    //         // add proof first
-    //         expect(await kilt.single_proof_exists(user1.address, cType, programHash)).to.equal(false);
-    //         await kilt.connect(user1).addProof(kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult);
-    //         expect(await kilt.single_proof_exists(user1.address, cType, programHash)).to.equal(true);
+    // TODO: need check
+    describe("User update proof", function () {
+        it("proofCid is the same twice(function _clear_proof() will not excute)", async function () {
+            // add proof first
+            expect(await kilt.single_proof_exists(user1.address, cType, programHash)).to.equal(false);
+            await kilt.connect(user1).addProof(kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult);
+            expect(await kilt.single_proof_exists(user1.address, cType, programHash)).to.equal(true);
 
-    //         // user1 update proof, function _clear_proof() is execured
-    //         await kilt.connect(user1).update_proof(newKiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult);
+            // check the storage before updating proof
+            assert.equal((await kilt.certificate(user1.address, cType)).kiltAddress, kiltAddress);
+            assert.equal((await kilt.proofs(user1.address, cType, programHash)).owner, user1.address);
+            assert.equal((await kilt.proofs(user1.address, cType, programHash)).fieldName, fieldName);
+            assert.equal((await kilt.proofs(user1.address, cType, programHash)).proofCid, proofCid);
+            // user1 update proof, function _clear_proof() is execured
+            await kilt.connect(user1).update_proof(newKiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult);
 
-    //         // verify successful update
-    //         expect(await kilt.single_proof_exists(user1.address, cType, programHash)).to.equal(true);
-    //     });
+            // check the storage after updating proof
+            assert.equal((await kilt.certificate(user1.address, cType)).kiltAddress, newKiltAddress);
+            assert.equal((await kilt.proofs(user1.address, cType, programHash)).owner, user1.address);
+            assert.equal((await kilt.proofs(user1.address, cType, programHash)).fieldName, fieldName);
+            assert.equal((await kilt.proofs(user1.address, cType, programHash)).proofCid, proofCid);
 
-    //     it("proofCid is the different twice", async function () {
-    //         // add proof first
-    //         expect(await kilt.single_proof_exists(user1.address, cType, programHash)).to.equal(false);
-    //         await kilt.connect(user1).addProof(kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult);
-    //         expect(await kilt.single_proof_exists(user1.address, cType, programHash)).to.equal(true);
+            // verify successful update
+            expect(await kilt.single_proof_exists(user1.address, cType, programHash)).to.equal(true);
+        });
 
-    //         // user1 update proof, function _clear_proof() is not execured
-    //         await kilt.connect(user1).update_proof(newKiltAddress, cType, fieldName, programHash, newProofCid, rootHash, expectResult);
+        it("proofCid is the different twice(function _clear_proof() will excute)", async function () {
+            // add proof first
+            expect(await kilt.single_proof_exists(user1.address, cType, programHash)).to.equal(false);
+            await kilt.connect(user1).addProof(kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult);
+            expect(await kilt.single_proof_exists(user1.address, cType, programHash)).to.equal(true);
 
-    //         // verify successful update
-    //         expect(await kilt.single_proof_exists(user1.address, cType, programHash)).to.equal(true);
-    //     });
-    // });
+            // worker add verification to increase approveCount number
+            await kilt.connect(worker1).addVerification(user1.address, rootHash, cType, programHash, isPassed_t);
+            await kilt.connect(worker2).addVerification(user1.address, rootHash, cType, programHash, isPassed_f);
+
+            assert.equal(await kilt.hasSubmitted(user1.address, worker1.address, rootHash, cType, programHash), true);
+            assert.equal(await kilt.hasSubmitted(user1.address, worker2.address, rootHash, cType, programHash), true);
+
+            // check the storage before updating proof
+            assert.equal((await kilt.certificate(user1.address, cType)).kiltAddress, kiltAddress);
+            assert.equal((await kilt.proofs(user1.address, cType, programHash)).owner, user1.address);
+            assert.equal((await kilt.proofs(user1.address, cType, programHash)).fieldName, fieldName);
+            assert.equal((await kilt.proofs(user1.address, cType, programHash)).proofCid, proofCid);
+            assert.equal((await kilt.getApproveCount(user1.address, cType, programHash, rootHash, isPassed_t)).toNumber(), 1);
+            assert.equal((await kilt.getApproveCount(user1.address, cType, programHash, rootHash, isPassed_f)).toNumber(), 1);   
+
+            // user1 update proof, function _clear_proof() is not execured
+            await kilt.connect(user1).update_proof(newKiltAddress, cType, fieldName, programHash, newProofCid, rootHash, expectResult);
+
+            // check the storage after updating proof
+            assert.equal((await kilt.certificate(user1.address, cType)).kiltAddress, newKiltAddress);
+            assert.equal((await kilt.proofs(user1.address, cType, programHash)).owner, user1.address);
+            assert.equal((await kilt.proofs(user1.address, cType, programHash)).fieldName, fieldName);
+            assert.equal((await kilt.proofs(user1.address, cType, programHash)).proofCid, newProofCid);
+            assert.equal((await kilt.getApproveCount(user1.address, cType, programHash, rootHash, isPassed_t)).toNumber(), 0);
+            assert.equal((await kilt.getApproveCount(user1.address, cType, programHash, rootHash, isPassed_f)).toNumber(), 0);  
+
+            // verify successful update
+            expect(await kilt.single_proof_exists(user1.address, cType, programHash)).to.equal(true);
+        });
+    });
 
 });

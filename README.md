@@ -22,6 +22,7 @@ Gateway to Regulated Web3.0
 Try running some of the following tasks:
 
 ```shell
+// hardhat basic using
 npx hardhat accounts
 npx hardhat compile
 npx hardhat clean
@@ -29,4 +30,7 @@ npx hardhat test
 npx hardhat node
 node scripts/sample-script.js
 npx hardhat help
+
+// hardhat-log-remover plugin
+yarn run hardhat remove-logs
 ```

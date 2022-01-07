@@ -10,11 +10,26 @@ library AddressesUtils {
     }
 
     // TODO: remove after testing
-    function judgeEqual(Addresses storage _addresses, uint _num, address _addr) view public returns (bool) {
-        if (_addresses.addresses[_addresses.index[_addr]] == _addresses.addresses[_num]) {
+    function judgeEqual(Addresses storage _addresses, uint _num, address _project) view public returns (bool) {
+        if (_addresses.addresses[_addresses.index[_project]] == _addresses.addresses[_num]) {
             return true;
         }
         return false;
+    }
+
+    // TODO: remove after testing
+    function getAddress(Addresses storage _addresses, uint256 _num) view public returns (address) {
+        return _addresses.addresses[_num];
+    }
+    
+    // TODO: remove after testing
+    function getIndex(Addresses storage _addresses, address _project) view public returns (uint256) {
+        return _addresses.index[_project];
+    }
+
+    // TODO: remove after testing
+    function getArrayLength(Addresses storage _addresses) view public returns (uint256) {
+        return _addresses.addresses.length;
     }
 
     function _addAddress(Addresses storage _addresses, address _addr) internal returns (bool) {

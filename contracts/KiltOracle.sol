@@ -34,15 +34,51 @@ contract KiltOracle is Properties, Ownable, IChecker {
     // }
 
     // TODO: remove after testing
+    /// @param _num array index number
     function judge(
         uint _num,
-        address _addr,
+        address _project,
         bytes32 _cTypeAllowed,
         bytes32 _programAllowed,
         bool _expectedResult
-    ) view public returns (bool) {
+    ) view public onlyOwner returns (bool) {
         AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
-        return projects.judgeEqual(_num, _addr);
+        return projects.judgeEqual(_num, _project);
+    }
+
+    // TODO: remove after testing
+    /// @dev this function just for checking address array in struct storage
+    /// @param _num array index number
+    function readAddress(
+        uint256 _num,
+        bytes32 _cTypeAllowed,
+        bytes32 _programAllowed,
+        bool _expectedResult
+    ) view public onlyOwner returns (address) {
+        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
+        return projects.getAddress(_num);
+    }
+
+    // TODO: remove after testing
+    /// @dev this function just for checking index mapping in struct storage
+    function readIndex(
+        address _project,
+        bytes32 _cTypeAllowed,
+        bytes32 _programAllowed,
+        bool _expectedResult
+    ) view public onlyOwner returns (uint256) {
+        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
+        return projects.getIndex(_project);
+    }
+
+    // TODO: remove after testing
+    function readProjectArrayLength(
+        bytes32 _cTypeAllowed,
+        bytes32 _programAllowed,
+        bool _expectedResult
+    ) view public onlyOwner returns (uint256) {
+        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
+        return projects.getArrayLength();
     }
 
     function addRule(
@@ -52,7 +88,6 @@ contract KiltOracle is Properties, Ownable, IChecker {
         bool _expectedResult,
         uint256 _customThreshold
     ) onlyOwner public {
-        // TODO: remove after testing
         AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
         require(projects._addAddress(_project), "Fail to pass addAddress in AddressUtils");
         customThreshold[_project] = _customThreshold;
