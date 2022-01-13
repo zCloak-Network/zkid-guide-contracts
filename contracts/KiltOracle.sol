@@ -33,6 +33,55 @@ contract KiltOracle is Properties, Ownable, IChecker {
     //     _;
     // }
 
+    function addRule(
+        address _project,
+        bytes32 _cTypeAllowed, 
+        bytes32 _programAllowed,
+        bool _expectedResult,
+        uint256 _customThreshold
+    ) onlyOwner public {
+        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
+        require(projects._addAddress(_project), "Fail to pass addAddress in AddressUtils");
+        customThreshold[_project] = _customThreshold;
+        emit AddRule(_project, _cTypeAllowed, _programAllowed, _expectedResult, _customThreshold);
+    
+    }
+
+    // helper function for restriction (due to syntax limits)
+    function isRegistered(bytes32 _cType, bytes32 _programHash, bool _expResult, address _project) public view returns (bool) {
+        AddressesUtils.Addresses storage addresses = restriction[_cType][_programHash][_expResult];
+        return addresses.exists(_project);
+    }
+
+    function threshold(address _project) public view returns (uint256) {
+        uint defaultThreshold = registry.uintOf(Properties.UINT_APPROVE_THRESHOLD);
+        uint cThreshold = customThreshold[_project];
+        if ( cThreshold > defaultThreshold) {
+            return cThreshold;
+        } else {
+            return defaultThreshold;
+        }
+    }
+
+    // TODO: add modifiert
+    function isValid(address _who, bytes32 _cType, bytes32 _programHash, bool _expectResult) override public view returns (bool) {
+        IRawChecker proofContract = IRawChecker(registry.addressOf(Properties.CONTRACT_MAIN_KILT));
+        (bytes32 rootHash, uint256 count) = proofContract.credentialProcess(_who, _cType); 
+        uint256 threshold = threshold(msg.sender);
+        if (count < threshold) {
+            return false;
+        }
+
+        uint256 passCount = proofContract.verificationProcess(_who, _cType, _programHash, rootHash, _expectResult);
+        
+        if (passCount >= threshold) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    // The following functions are test functions which is remarked as 'remove after testing'.
     // TODO: remove after testing
     /// @param _num array index number
     function judge(
@@ -81,20 +130,6 @@ contract KiltOracle is Properties, Ownable, IChecker {
         return projects.getArrayLength();
     }
 
-    function addRule(
-        address _project,
-        bytes32 _cTypeAllowed, 
-        bytes32 _programAllowed,
-        bool _expectedResult,
-        uint256 _customThreshold
-    ) onlyOwner public {
-        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
-        require(projects._addAddress(_project), "Fail to pass addAddress in AddressUtils");
-        customThreshold[_project] = _customThreshold;
-        emit AddRule(_project, _cTypeAllowed, _programAllowed, _expectedResult, _customThreshold);
-    
-    }
-
     // TODO: remove after testing deleteAddress
     function deleteRule(
         address _project,
@@ -107,40 +142,6 @@ contract KiltOracle is Properties, Ownable, IChecker {
         customThreshold[_project] = 0;
         uint256 cThreshold = customThreshold[_project];
         emit DeleteRule(_project, _cTypeAllowed, _programAllowed, _expectedResult, cThreshold);
-    }
-
-    // helper function for restriction (due to syntax limits)
-    function isRegistered(bytes32 _cType, bytes32 _programHash, bool _expResult, address _project) public view returns (bool) {
-        AddressesUtils.Addresses storage addresses = restriction[_cType][_programHash][_expResult];
-        return addresses.exists(_project);
-    }
-
-    function threshold(address _project) public view returns (uint256) {
-        uint defaultThreshold = registry.uintOf(Properties.UINT_APPROVE_THRESHOLD);
-        uint cThreshold = customThreshold[_project];
-        if ( cThreshold > defaultThreshold) {
-            return cThreshold;
-        } else {
-            return defaultThreshold;
-        }
-    }
-
-    // TODO: add modifiert
-    function isValid(address _who, bytes32 _cType, bytes32 _programHash, bool _expectResult) override public view returns (bool) {
-        IRawChecker proofContract = IRawChecker(registry.addressOf(Properties.CONTRACT_MAIN_KILT));
-        (bytes32 rootHash, uint256 count) = proofContract.credentialProcess(_who, _cType); 
-        uint256 threshold = threshold(msg.sender);
-        if (count < threshold) {
-            return false;
-        }
-
-        uint256 passCount = proofContract.verificationProcess(_who, _cType, _programHash, rootHash, _expectResult);
-        
-        if (passCount >= threshold) {
-            return true;
-        } else {
-            return false;
-        }
     }
 
 }
