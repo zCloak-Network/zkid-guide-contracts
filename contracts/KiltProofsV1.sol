@@ -9,11 +9,11 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/IRegistry.sol";
 import "./interfaces/IRawChecker.sol";
+import "./utils/Bytes32Array.sol";
 import "./common/Properties.sol";
 import "./common/AuthControl.sol";
 
 contract KiltProofsV1 is AuthControl, IRawChecker, Properties {
-
     bytes32 public constant NULL = "";
     
     struct Credential {
@@ -34,6 +34,11 @@ contract KiltProofsV1 is AuthControl, IRawChecker, Properties {
     // registry where we query global settings
     IRegistry public registry;
 
+    // confirmed attesters by zCloak and community
+    // AttesterID => isConfirmed
+    mapping(bytes32 => bool) defaultAttesters;
+    
+
     // user => ctype => programHash => workerAddress => rootHash
     mapping(address => mapping(bytes32 => mapping(bytes32 => mapping(address => bytes32)))) public submissionRecords;
 
@@ -49,8 +54,9 @@ contract KiltProofsV1 is AuthControl, IRawChecker, Properties {
     // cType => programHash => expectedResult
     mapping(bytes32 => mapping(bytes32 => bool)) expectedResult;   
     
-    event AddProof(address dataOwner, bytes32 kiltAddress, bytes32 cType, bytes32 programHash, string fieldName, string proofCid, bytes32 rootHash, bool expectResult);
+    event AddProof(address dataOwner, bytes32 kiltAddress, bytes32 attester, bytes32 cType, bytes32 programHash, string fieldName, string proofCid, bytes32 rootHash, bool expectResult);
     event AddVerification(address dataOwner, address worker, bytes32 rootHash, bool isPassed);
+    event AttesterApproved(bytes32 attester);
 
     constructor(IRegistry _registry) {
         registry = _registry;
@@ -70,6 +76,7 @@ contract KiltProofsV1 is AuthControl, IRawChecker, Properties {
 
     function addProof(
         bytes32 _kiltAddress, 
+        bytes32 _attester,
         bytes32 _cType,
         string memory _fieldName,
         bytes32 _programHash, 
@@ -78,11 +85,12 @@ contract KiltProofsV1 is AuthControl, IRawChecker, Properties {
         bool _expectResult
     ) public {
         require(!single_proof_exists(msg.sender, _cType, _programHash), "Your proof has already existed, do not add same proof again");
-        _addProof(msg.sender, _kiltAddress, _cType, _fieldName, _programHash, _proofCid, _rootHash, _expectResult);
+        _addProof(msg.sender, _kiltAddress, _attester, _cType, _fieldName, _programHash, _proofCid, _rootHash, _expectResult);
     }
 
     function update_proof(
         bytes32 _kiltAddress, 
+        bytes32 _attester,
         bytes32 _cType,
         string memory _fieldName,
         bytes32 _programHash, 
@@ -101,7 +109,7 @@ contract KiltProofsV1 is AuthControl, IRawChecker, Properties {
             credential.finalRootHash = NULL;
         }
 
-        _addProof(msg.sender, _kiltAddress, _cType, _fieldName, _programHash, _proofCid, _rootHash, _expectResult);
+        _addProof(msg.sender, _kiltAddress, _attester, _cType, _fieldName, _programHash, _proofCid, _rootHash, _expectResult);
     }
 
     // @param _rootHash if rootHash is revoked on Kilt or does not exist on Kilt Network, this will be set to NULL
@@ -115,6 +123,11 @@ contract KiltProofsV1 is AuthControl, IRawChecker, Properties {
         require(single_proof_exists(_dataOwner, _cType, _programHash), "the Proof does not exist");
         require(!hasSubmitted(_dataOwner, msg.sender, _rootHash, _cType, _programHash), "you have already submitted");
         _addVerification(_dataOwner, msg.sender, _rootHash, _cType, _programHash, _isPassed);
+    }
+
+    function approveAttester(bytes32 _attester) public auth() {
+        defaultAttesters[_attester] = true;
+        emit AttesterApproved(_attester);
     }
 
 
@@ -139,6 +152,7 @@ contract KiltProofsV1 is AuthControl, IRawChecker, Properties {
     function _addProof(
         address _user,
         bytes32 _kiltAddress, 
+        bytes32 _attester,
         bytes32 _cType,
         string memory _fieldName,
         bytes32 _programHash, 
@@ -146,6 +160,7 @@ contract KiltProofsV1 is AuthControl, IRawChecker, Properties {
         bytes32 _rootHash,
         bool _result
     ) internal {
+        require(defaultAttesters[_attester] == true, "Not qualified attester");
         StarkProof storage proof = proofs[_user][_cType][_programHash];
         proof.fieldName = _fieldName;
         proof.owner = _user;
@@ -154,7 +169,7 @@ contract KiltProofsV1 is AuthControl, IRawChecker, Properties {
         Credential storage credential =  certificate[_user][_cType];
         credential.kiltAddress = _kiltAddress;
 
-        emit AddProof(_user, _kiltAddress, _cType, _programHash, _fieldName, _proofCid, _rootHash, _result);
+        emit AddProof(_user, _kiltAddress, _attester, _cType, _programHash, _fieldName, _proofCid, _rootHash, _result);
     }
 
 
