@@ -60,7 +60,7 @@ contract KiltProofsV1 is AuthControl, IRawChecker, Properties {
 
     constructor(IRegistry _registry) {
         registry = _registry;
-    }
+    }    
 
     // check if the proof has been set
     function single_proof_exists(
@@ -245,5 +245,28 @@ contract KiltProofsV1 is AuthControl, IRawChecker, Properties {
     ) override public view returns (uint256) {
         StarkProof storage proof = proofs[_who][_cType][_programHash];
         return proof.approveCount[_rootHash][_expectResult];
+    }
+
+    // The following functions are test functions which is remarked as 'remove after testing'.
+    // TODO: remove after testing
+    function getApprovedRootHash(
+        address _dataOwner,
+        bytes32 _cType,
+        bytes32 _rootHash
+    ) view public auth() returns(uint256) {
+        Credential storage _credential = certificate[_dataOwner][_cType];
+        return (_credential.approvedRootHash[_rootHash]);
+    }
+
+    // TODO: remove after testing
+    function getApproveCount(
+        address _dataOwner,
+        bytes32 _cType,
+        bytes32 _programHash,
+        bytes32 _rootHash,
+        bool _isPassed
+    ) view public auth() returns(uint256) {
+        StarkProof storage _proof = proofs[_dataOwner][_cType][_programHash];
+        return (_proof.approveCount[_rootHash][_isPassed]);
     }
 }
