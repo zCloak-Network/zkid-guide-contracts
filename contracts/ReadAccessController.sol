@@ -8,8 +8,10 @@ import "./interfaces/IChecker.sol";
 import "./interfaces/IRawChecker.sol";
 import "./utils/Addresses.sol";
 
-
-contract KiltOracle is Properties, Ownable, IChecker {
+// Rule Registry for the project who needs users' on-chain 
+// protected  kyc info.
+// And this contract serves as the read gateway for the kyc info.
+contract ReadAccessController is Properties, Ownable, IChecker {
 
     using AddressesUtils for AddressesUtils.Addresses;
 

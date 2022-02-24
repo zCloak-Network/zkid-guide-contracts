@@ -78,9 +78,9 @@ contract KiltProofsV1 is AuthControl, IRawChecker, Properties {
         bytes32 _kiltAddress, 
         bytes32 _attester,
         bytes32 _cType,
-        string memory _fieldName,
+        string calldata _fieldName,
         bytes32 _programHash, 
-        string memory _proofCid,
+        string calldata _proofCid,
         bytes32 _rootHash,
         bool _expectResult
     ) public {
@@ -92,9 +92,9 @@ contract KiltProofsV1 is AuthControl, IRawChecker, Properties {
         bytes32 _kiltAddress, 
         bytes32 _attester,
         bytes32 _cType,
-        string memory _fieldName,
+        string calldata _fieldName,
         bytes32 _programHash, 
-        string memory _proofCid,
+        string calldata _proofCid,
         bytes32 _rootHash,
         bool _expectResult
     ) public {
