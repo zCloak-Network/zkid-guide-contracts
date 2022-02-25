@@ -6,55 +6,74 @@ import "./common/Properties.sol";
 import "./interfaces/IRegistry.sol";
 import "./interfaces/IChecker.sol";
 import "./interfaces/IRawChecker.sol";
+import "./interfaces/IERC677TransferReceiver.sol";
+import "./interfaces/IMeter.sol";
 import "./utils/Addresses.sol";
 
-// Rule Registry for the project who needs users' on-chain 
+
+// Rule Registry for the project who needs users' on-chain s
 // protected  kyc info.
 // And this contract serves as the read gateway for the kyc info.
-contract ReadAccessController is Properties, Ownable, IChecker {
+contract ReadAccessController is Properties, Ownable, IChecker, IERC677TransferReceiver {
 
     using AddressesUtils for AddressesUtils.Addresses;
 
     IRegistry public registry;
 
-    // cType => programHash => expectResult => registered projects
-    mapping(bytes32 => mapping(bytes32 => mapping(bool => AddressesUtils.Addresses))) internal restriction;
+    struct Requirement {
+        // ctype => AttesterAddress
+        mapping(bytes32 => bytes32) trustedAttester;
+        // ctype => programHash => expectResult
+        mapping(bytes32 => mapping(bytes32 => bool)) conditions;
+        // where to check access permission and the billing rule
+        // address(0) if the project has no permission to read
+        address meter;
+    }
 
+
+    // TODO: if we use the universal threshold instead?
     mapping(address => uint256) public customThreshold;
 
+    // project address => Requirement
+    mapping(address => Requirement) public rules;
+
+    // project address => rule adder
+    // only the 'owner' of the project could add rule
+    mapping(address => address) public controller;
+
     // TODO: remove after testing: add DeleteRule event
-    event AddRule(address token, bytes32 cType, bytes32 programHash, bool expectedResult, uint256 customThreshold);
-    event DeleteRule(address token, bytes32 cType, bytes32 programHash, bool expectedResult, uint256 customThreshold);
+    event AddRule(address token, bytes32 cType, bytes32 programHash, bool expectedResult);
+    event DeleteRule(address token, bytes32 cType, bytes32 programHash, bool expectedResult);
 
     constructor(address _registry) {
         registry = IRegistry(_registry);
     }
 
-    // modifier accessible(bytes32 _cType, bytes32 _programHash, bool _expResult, address _project) {
-    //     require(isRegistered(_cType, _programHash, _expResult, _project));
-    //     _;
-    // }
 
     function addRule(
         address _project,
         bytes32 _cTypeAllowed, 
         bytes32 _programAllowed,
-        bool _expectedResult,
-        uint256 _customThreshold
-    ) onlyOwner public {
-        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
-        require(projects._addAddress(_project), "Fail to pass addAddress in AddressUtils");
-        customThreshold[_project] = _customThreshold;
-        emit AddRule(_project, _cTypeAllowed, _programAllowed, _expectedResult, _customThreshold);
+        bytes32 _attester,
+        bool _expectedResult
+    ) public {
+        // To check if the requirements have not come into effect
+        // or the msg.sender is the real owner of the _project
+        require(rules[_project].meter == address(0) || 
+            controller[_project] == msg.sender, "No Access to rule modification");
+        
+        rules[_project].trustedAttester[_cTypeAllowed] = _attester;
+        rules[_project].conditions[_cTypeAllowed][_programAllowed] = _expectedResult;
+        emit AddRule(_project, _cTypeAllowed, _programAllowed, _expectedResult);
     
     }
 
-    // helper function for restriction (due to syntax limits)
-    function isRegistered(bytes32 _cType, bytes32 _programHash, bool _expResult, address _project) public view returns (bool) {
-        AddressesUtils.Addresses storage addresses = restriction[_cType][_programHash][_expResult];
-        return addresses.exists(_project);
+
+    function approve() public onlyOwner {
+        
     }
 
+    // TODO: do we need to allow project to customize the threshold
     function threshold(address _project) public view returns (uint256) {
         uint defaultThreshold = registry.uintOf(Properties.UINT_APPROVE_THRESHOLD);
         uint cThreshold = customThreshold[_project];
@@ -65,8 +84,8 @@ contract ReadAccessController is Properties, Ownable, IChecker {
         }
     }
 
-    // TODO: add modifiert
     function isValid(address _who, bytes32 _cType, bytes32 _programHash, bool _expectResult) override public view returns (bool) {
+        require(rules[msg.sender].meter != address(0) || msg.sender == address(this), "No Access");
         IRawChecker proofContract = IRawChecker(registry.addressOf(Properties.CONTRACT_MAIN_KILT));
         (bytes32 rootHash, uint256 count) = proofContract.credentialProcess(_who, _cType); 
         uint256 threshold = threshold(msg.sender);
@@ -83,67 +102,29 @@ contract ReadAccessController is Properties, Ownable, IChecker {
         }
     }
 
-    // The following functions are test functions which is remarked as 'remove after testing'.
-    // TODO: remove after testing
-    /// @param _num array index number
-    function judge(
-        uint _num,
-        address _project,
-        bytes32 _cTypeAllowed,
-        bytes32 _programAllowed,
-        bool _expectedResult
-    ) view public onlyOwner returns (bool) {
-        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
-        return projects.judgeEqual(_num, _project);
-    }
 
-    // TODO: remove after testing
-    /// @dev this function just for checking address array in struct storage
-    /// @param _num array index number
-    function readAddress(
-        uint256 _num,
-        bytes32 _cTypeAllowed,
-        bytes32 _programAllowed,
-        bool _expectedResult
-    ) view public onlyOwner returns (address) {
-        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
-        return projects.getAddress(_num);
-    }
+    function tokenFallback(
+        address _from,
+        uint256 _amount,
+        bytes calldata data
+    ) override external returns (bool) {
+        IMeter meter = IMeter(rules[msg.sender].meter);
+        (uint expiration, address token, uint perVisit) = meter.meter();
+        // if the project is not charged on time
+        if (expiration == 0) {
+            // make sure this visit is paid correctly
+            require(msg.sender == token, "Wrong token kind");
+            require(_amount >= perVisit, "Fee to low");
+        } else {
+            // charge on time
+            require(expiration >= block.timestamp, "Expired!");
+        }
 
-    // TODO: remove after testing
-    /// @dev this function just for checking index mapping in struct storage
-    function readIndex(
-        address _project,
-        bytes32 _cTypeAllowed,
-        bytes32 _programAllowed,
-        bool _expectedResult
-    ) view public onlyOwner returns (uint256) {
-        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
-        return projects.getIndex(_project);
-    }
+        // TODO: check to function to call, limit it to `isValid`
+        (bool result, bytes memory response) = address(this).call(data);
+        // TODO: wrong logic.
+        return result;
+        
 
-    // TODO: remove after testing
-    function readProjectArrayLength(
-        bytes32 _cTypeAllowed,
-        bytes32 _programAllowed,
-        bool _expectedResult
-    ) view public onlyOwner returns (uint256) {
-        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
-        return projects.getArrayLength();
     }
-
-    // TODO: remove after testing deleteAddress
-    function deleteRule(
-        address _project,
-        bytes32 _cTypeAllowed, 
-        bytes32 _programAllowed,
-        bool _expectedResult
-    ) onlyOwner public {
-        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
-        require(projects._deleteAddress(_project), "Fail to pass deleteAddress in AddressUtils");
-        customThreshold[_project] = 0;
-        uint256 cThreshold = customThreshold[_project];
-        emit DeleteRule(_project, _cTypeAllowed, _programAllowed, _expectedResult, cThreshold);
-    }
-
 }
