@@ -34,7 +34,16 @@ contract ReadAccessController is Properties, Ownable, IChecker, IERC1363Receiver
     // TODO: if we use the universal threshold instead?
     mapping(address => uint256) public customThreshold;
 
-    event AddRule(address token, bytes32 cType, bytes32 programHash, bool expectedResult, uint256 customThreshold);
+    // project address => Requirement
+    mapping(address => Requirement) public rules;
+
+    // project address => rule adder
+    // only the 'owner' of the project could add rule
+    mapping(address => address) public controller;
+
+    /// @notice DeleteRule event is a test event
+    event AddRule(address token, bytes32 cType, bytes32 programHash, bool expectedResult);
+    event DeleteRule(address token, bytes32 cType, bytes32 programHash, bool expectedResult);
 
     constructor(address _registry) {
         registry = IRegistry(_registry);
