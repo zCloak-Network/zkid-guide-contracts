@@ -6,7 +6,7 @@ import "./common/Properties.sol";
 import "./interfaces/IRegistry.sol";
 import "./interfaces/IChecker.sol";
 import "./interfaces/IRawChecker.sol";
-import "./interfaces/IERC677TransferReceiver.sol";
+import "./interfaces/IERC1363Receiver.sol";
 import "./interfaces/IMeter.sol";
 import "./utils/Addresses.sol";
 
@@ -14,7 +14,7 @@ import "./utils/Addresses.sol";
 // Rule Registry for the project who needs users' on-chain s
 // protected  kyc info.
 // And this contract serves as the read gateway for the kyc info.
-contract ReadAccessController is Properties, Ownable, IChecker, IERC677TransferReceiver {
+contract ReadAccessController is Properties, Ownable, IChecker, IERC1363Receiver {
 
     using AddressesUtils for AddressesUtils.Addresses;
 
@@ -103,11 +103,12 @@ contract ReadAccessController is Properties, Ownable, IChecker, IERC677TransferR
     }
 
 
-    function tokenFallback(
-        address _from,
+    function onTransferReceived(
+        address _operator,
+        address _sender,
         uint256 _amount,
         bytes calldata data
-    ) override external returns (bool) {
+    ) override external returns (bytes4) {
         IMeter meter = IMeter(rules[msg.sender].meter);
         (uint expiration, address token, uint perVisit) = meter.meter();
         // if the project is not charged on time
@@ -123,7 +124,7 @@ contract ReadAccessController is Properties, Ownable, IChecker, IERC677TransferR
         // TODO: check to function to call, limit it to `isValid`
         (bool result, bytes memory response) = address(this).call(data);
         // TODO: wrong logic.
-        return result;
+       return IERC1363Receiver(this).onTransferReceived.selector;
         
 
     }
