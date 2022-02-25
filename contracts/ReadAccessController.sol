@@ -6,20 +6,32 @@ import "./common/Properties.sol";
 import "./interfaces/IRegistry.sol";
 import "./interfaces/IChecker.sol";
 import "./interfaces/IRawChecker.sol";
+import "./interfaces/IERC1363Receiver.sol";
+import "./interfaces/IMeter.sol";
 import "./utils/Addresses.sol";
 
-// Rule Registry for the project who needs users' on-chain 
+
+// Rule Registry for the project who needs users' on-chain s
 // protected  kyc info.
 // And this contract serves as the read gateway for the kyc info.
-contract ReadAccessController is Properties, Ownable, IChecker {
+contract ReadAccessController is Properties, Ownable, IChecker, IERC1363Receiver {
 
     using AddressesUtils for AddressesUtils.Addresses;
 
     IRegistry public registry;
 
-    // cType => programHash => expectResult => registered projects
-    mapping(bytes32 => mapping(bytes32 => mapping(bool => AddressesUtils.Addresses))) internal restriction;
+    struct Requirement {
+        // ctype => AttesterAddress
+        mapping(bytes32 => bytes32) trustedAttester;
+        // ctype => programHash => expectResult
+        mapping(bytes32 => mapping(bytes32 => bool)) conditions;
+        // where to check access permission and the billing rule
+        // address(0) if the project has no permission to read
+        address meter;
+    }
 
+
+    // TODO: if we use the universal threshold instead?
     mapping(address => uint256) public customThreshold;
 
     event AddRule(address token, bytes32 cType, bytes32 programHash, bool expectedResult, uint256 customThreshold);
@@ -28,31 +40,31 @@ contract ReadAccessController is Properties, Ownable, IChecker {
         registry = IRegistry(_registry);
     }
 
-    // modifier accessible(bytes32 _cType, bytes32 _programHash, bool _expResult, address _project) {
-    //     require(isRegistered(_cType, _programHash, _expResult, _project));
-    //     _;
-    // }
 
     function addRule(
         address _project,
         bytes32 _cTypeAllowed, 
         bytes32 _programAllowed,
-        bool _expectedResult,
-        uint256 _customThreshold
-    ) onlyOwner public {
-        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
-        require(projects._addAddress(_project), "Fail to pass addAddress in AddressUtils");
-        customThreshold[_project] = _customThreshold;
-        emit AddRule(_project, _cTypeAllowed, _programAllowed, _expectedResult, _customThreshold);
+        bytes32 _attester,
+        bool _expectedResult
+    ) public {
+        // To check if the requirements have not come into effect
+        // or the msg.sender is the real owner of the _project
+        require(rules[_project].meter == address(0) || 
+            controller[_project] == msg.sender, "No Access to rule modification");
+        
+        rules[_project].trustedAttester[_cTypeAllowed] = _attester;
+        rules[_project].conditions[_cTypeAllowed][_programAllowed] = _expectedResult;
+        emit AddRule(_project, _cTypeAllowed, _programAllowed, _expectedResult);
     
     }
 
-    // helper function for restriction (due to syntax limits)
-    function isRegistered(bytes32 _cType, bytes32 _programHash, bool _expResult, address _project) public view returns (bool) {
-        AddressesUtils.Addresses storage addresses = restriction[_cType][_programHash][_expResult];
-        return addresses.exists(_project);
+
+    function approve() public onlyOwner {
+        
     }
 
+    // TODO: do we need to allow project to customize the threshold
     function threshold(address _project) public view returns (uint256) {
         uint defaultThreshold = registry.uintOf(Properties.UINT_APPROVE_THRESHOLD);
         uint cThreshold = customThreshold[_project];
@@ -63,8 +75,8 @@ contract ReadAccessController is Properties, Ownable, IChecker {
         }
     }
 
-    // TODO: add modifiert
     function isValid(address _who, bytes32 _cType, bytes32 _programHash, bool _expectResult) override public view returns (bool) {
+        require(rules[msg.sender].meter != address(0) || msg.sender == address(this), "No Access");
         IRawChecker proofContract = IRawChecker(registry.addressOf(Properties.CONTRACT_MAIN_KILT));
         (bytes32 rootHash, uint256 count) = proofContract.credentialProcess(_who, _cType); 
         uint256 threshold = threshold(msg.sender);
@@ -81,4 +93,30 @@ contract ReadAccessController is Properties, Ownable, IChecker {
         }
     }
 
+
+    function onTransferReceived(
+        address _operator,
+        address _sender,
+        uint256 _amount,
+        bytes calldata data
+    ) override external returns (bytes4) {
+        IMeter meter = IMeter(rules[msg.sender].meter);
+        (uint expiration, address token, uint perVisit) = meter.meter();
+        // if the project is not charged on time
+        if (expiration == 0) {
+            // make sure this visit is paid correctly
+            require(msg.sender == token, "Wrong token kind");
+            require(_amount >= perVisit, "Fee to low");
+        } else {
+            // charge on time
+            require(expiration >= block.timestamp, "Expired!");
+        }
+
+        // TODO: check to function to call, limit it to `isValid`
+        (bool result, bytes memory response) = address(this).call(data);
+        // TODO: wrong logic.
+       return IERC1363Receiver(this).onTransferReceived.selector;
+        
+
+    }
 }
