@@ -22,9 +22,7 @@ contract ReadAccessController is Properties, Ownable, IChecker {
 
     mapping(address => uint256) public customThreshold;
 
-    // TODO: remove after testing: add DeleteRule event
     event AddRule(address token, bytes32 cType, bytes32 programHash, bool expectedResult, uint256 customThreshold);
-    event DeleteRule(address token, bytes32 cType, bytes32 programHash, bool expectedResult, uint256 customThreshold);
 
     constructor(address _registry) {
         registry = IRegistry(_registry);
@@ -81,69 +79,6 @@ contract ReadAccessController is Properties, Ownable, IChecker {
         } else {
             return false;
         }
-    }
-
-    // The following functions are test functions which is remarked as 'remove after testing'.
-    // TODO: remove after testing
-    /// @param _num array index number
-    function judge(
-        uint _num,
-        address _project,
-        bytes32 _cTypeAllowed,
-        bytes32 _programAllowed,
-        bool _expectedResult
-    ) view public onlyOwner returns (bool) {
-        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
-        return projects.judgeEqual(_num, _project);
-    }
-
-    // TODO: remove after testing
-    /// @dev this function just for checking address array in struct storage
-    /// @param _num array index number
-    function readAddress(
-        uint256 _num,
-        bytes32 _cTypeAllowed,
-        bytes32 _programAllowed,
-        bool _expectedResult
-    ) view public onlyOwner returns (address) {
-        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
-        return projects.getAddress(_num);
-    }
-
-    // TODO: remove after testing
-    /// @dev this function just for checking index mapping in struct storage
-    function readIndex(
-        address _project,
-        bytes32 _cTypeAllowed,
-        bytes32 _programAllowed,
-        bool _expectedResult
-    ) view public onlyOwner returns (uint256) {
-        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
-        return projects.getIndex(_project);
-    }
-
-    // TODO: remove after testing
-    function readProjectArrayLength(
-        bytes32 _cTypeAllowed,
-        bytes32 _programAllowed,
-        bool _expectedResult
-    ) view public onlyOwner returns (uint256) {
-        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
-        return projects.getArrayLength();
-    }
-
-    // TODO: remove after testing deleteAddress
-    function deleteRule(
-        address _project,
-        bytes32 _cTypeAllowed, 
-        bytes32 _programAllowed,
-        bool _expectedResult
-    ) onlyOwner public {
-        AddressesUtils.Addresses storage projects = restriction[_cTypeAllowed][_programAllowed][_expectedResult];
-        require(projects._deleteAddress(_project), "Fail to pass deleteAddress in AddressUtils");
-        customThreshold[_project] = 0;
-        uint256 cThreshold = customThreshold[_project];
-        emit DeleteRule(_project, _cTypeAllowed, _programAllowed, _expectedResult, cThreshold);
     }
 
 }
