@@ -9,7 +9,7 @@ library Bytes32Array {
         mapping(bytes32 => uint) index;
     }
 
-    // TODO: remove after testing
+    /// @dev Test function: judging array index and mapping variable whether equal or not
     function judgeEqual(Bytes32s storage _bytes32Array, uint _num, bytes32 _bytes32) view public returns (bool) {
         if (_bytes32Array.internalBytes32s[_bytes32Array.index[_bytes32]] == _bytes32Array.internalBytes32s[_num]) {
             return true;
