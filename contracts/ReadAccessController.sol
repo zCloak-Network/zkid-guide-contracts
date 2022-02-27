@@ -50,6 +50,12 @@ contract ReadAccessController is Properties, Ownable, IChecker, IERC1363Receiver
     }
 
 
+    modifier accessAllowed(address _caller) {
+         require(rules[_caller].meter != address(0) || _caller == address(this), "No Access");
+         _;
+    }          
+
+
     function addRule(
         address _project,
         bytes32 _cTypeAllowed, 
@@ -69,6 +75,7 @@ contract ReadAccessController is Properties, Ownable, IChecker, IERC1363Receiver
     }
 
 
+    // Called by zCloak Committee
     function approve() public onlyOwner {
         
     }
@@ -84,8 +91,8 @@ contract ReadAccessController is Properties, Ownable, IChecker, IERC1363Receiver
         }
     }
 
-    function isValid(address _who, bytes32 _cType, bytes32 _programHash, bool _expectResult) override public view returns (bool) {
-        require(rules[msg.sender].meter != address(0) || msg.sender == address(this), "No Access");
+    function isValid(address _who, bytes32 _cType, bytes32 _programHash, bool _expectResult) accessAllowed(msg.sender) override public view returns (bool) {
+       
         IRawChecker proofContract = IRawChecker(registry.addressOf(Properties.CONTRACT_MAIN_KILT));
         (bytes32 rootHash, uint256 count) = proofContract.credentialProcess(_who, _cType); 
         uint256 threshold = threshold(msg.sender);
@@ -109,23 +116,43 @@ contract ReadAccessController is Properties, Ownable, IChecker, IERC1363Receiver
         uint256 _amount,
         bytes calldata data
     ) override external returns (bytes4) {
-        IMeter meter = IMeter(rules[msg.sender].meter);
-        (uint expiration, address token, uint perVisit) = meter.meter();
-        // if the project is not charged on time
-        if (expiration == 0) {
-            // make sure this visit is paid correctly
-            require(msg.sender == token, "Wrong token kind");
-            require(_amount >= perVisit, "Fee to low");
-        } else {
-            // charge on time
-            require(expiration >= block.timestamp, "Expired!");
+        if (msg.sender != _operator) {
+            // wrong sender
+            return bytes4(0);
         }
+        IMeter meter = IMeter(rules[_operator].meter);
+            (uint expiration, address token, uint perVisit) = meter.meter();
+            // if the project is not charged on time
+            if (expiration == 0) {
+                // make sure this visit is paid correctly
+                require(_operator == token, "Wrong token kind");
+                require(_amount >= perVisit, "Fee to low");
+            } else {
+                // charge on time
+                require(expiration >= block.timestamp, "Expired!");
+            }
 
-        // TODO: check to function to call, limit it to `isValid`
-        (bool result, bytes memory response) = address(this).call(data);
-        // TODO: wrong logic.
-       return IERC1363Receiver(this).onTransferReceived.selector;
-        
+            address who;
+            bytes32 cType;
+            bytes32 programHash; 
+            bool expectedResult;
+
+           assembly {
+               let ptr := mload(0x40)
+                calldatacopy(ptr, 0, calldatasize())
+                who := mload(add(ptr, 0x80))
+                cType := mload(add(ptr, 0x100))
+                programHash := mload(add(ptr, 0x120))
+                expectedResult := mload(add(ptr, 0x140))
+           }
+
+           bool res = isValid(who, cType, programHash, expectedResult);
+
+           if (res) {
+               return IERC1363Receiver(this).onTransferReceived.selector;
+           } else {
+               return bytes4(0);
+           }
 
     }
 }
