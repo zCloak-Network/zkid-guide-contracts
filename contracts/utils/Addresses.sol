@@ -40,8 +40,7 @@ library AddressesUtils {
        
     }
 
-    // The following functions are test functions which is remarked as 'remove after testing'.
-    // TODO: remove after testing
+    /// @dev Test function: judging array index and mapping variable whether equal or not
     function judgeEqual(Addresses storage _addresses, uint _num, address _project) view public returns (bool) {
         if (_addresses.addresses[_addresses.index[_project]] == _addresses.addresses[_num]) {
             return true;
@@ -49,17 +48,17 @@ library AddressesUtils {
         return false;
     }
 
-    // TODO: remove after testing
+    /// @dev Test function: get member address array of struct Addresses
     function getAddress(Addresses storage _addresses, uint256 _num) view public returns (address) {
         return _addresses.addresses[_num];
     }
     
-    // TODO: remove after testing
+    /// @dev Test function: get member mapping variable of struct Addresses
     function getIndex(Addresses storage _addresses, address _project) view public returns (uint256) {
         return _addresses.index[_project];
     }
 
-    // TODO: remove after testing
+    /// @dev Test function: get address length
     function getArrayLength(Addresses storage _addresses) view public returns (uint256) {
         return _addresses.addresses.length;
     }

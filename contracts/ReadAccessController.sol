@@ -41,7 +41,7 @@ contract ReadAccessController is Properties, Ownable, IChecker, IERC1363Receiver
     // only the 'owner' of the project could add rule
     mapping(address => address) public controller;
 
-    // TODO: remove after testing: add DeleteRule event
+    /// @notice DeleteRule event is a test event
     event AddRule(address token, bytes32 cType, bytes32 programHash, bool expectedResult);
     event DeleteRule(address token, bytes32 cType, bytes32 programHash, bool expectedResult);
 
