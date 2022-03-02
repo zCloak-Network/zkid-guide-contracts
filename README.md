@@ -1,12 +1,12 @@
 # z-profile
-Main logic of zkPASS on evm-compatible blockchain. 
+Smart contracts of zkID on evm-compatible blockchain. 
 
-## What is zkPASS
-Gateway to Regulated Web3.0
+## What is the zkID APP
+Privacy-preserving identity service for Web 3.0.
 
 ## Main Contracts
-- KiltProofsV1: Main logics and storage that we use to store and verify STARKS proof.
-- RegulatedTransfer: The example contract that shows how to use zk privacy-protected function.
+- KiltProofsV1: Smart contract for storing the verification result of STARKS proofs.
+- RegulatedTransfer: An example contract that shows how to use link the result of a zkp computation to an ERC-20 fund transfer.
 
 ### Test Network
 #### Moonbase Alpha:
