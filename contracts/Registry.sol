@@ -8,6 +8,7 @@ contract Registry is Ownable {
     enum SettingsValueTypes { NONE, UINT, STRING, ADDRESS, BYTES, BOOL, INT }
 
     mapping(bytes32 => uint256) public uintProperties;
+    mapping(bytes32 => uint32) public uint32Properties;
     mapping(bytes32 => string) public stringProperties;
     mapping(bytes32 => address) public addressProperties;
     mapping(bytes32 => bytes) public bytesProperties;
@@ -18,6 +19,10 @@ contract Registry is Ownable {
 
     function uintOf(bytes32 _propertyName) public view returns (uint256) {
         return uintProperties[_propertyName];
+    }
+
+    function uint32Of(bytes32 _propertyName) public view returns (uint32) {
+        return uint32Properties[_propertyName];
     }
 
     function stringOf(bytes32 _propertyName) public view returns (string memory) {

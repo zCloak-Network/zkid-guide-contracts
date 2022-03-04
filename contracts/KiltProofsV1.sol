@@ -50,7 +50,7 @@ contract KiltProofsV1 is AuthControl, Properties {
     mapping(bytes32 => address) public kiltAddr2Addr;
 
     // userAdd => requestHash => proofCid
-    mapping(address => mapping(bytes32 => string)) proofs;
+    mapping(address => mapping(bytes32 => string)) public proofs;
 
     // userAdd => requestHash => requestDetails
     mapping(address => mapping(bytes32 => RequestDetails)) requests;
@@ -92,7 +92,6 @@ contract KiltProofsV1 is AuthControl, Properties {
         string calldata _fieldName,
         bytes32 _programHash, 
         string calldata _proofCid,
-        bytes32 _rootHash,
         bool _expResult
     ) public {
         require(addr2KiltAddr[msg.sender] == bytes32(0) && kiltAddr2Addr[_kiltAccount] == address(0), "Kilt Account Already bounded.");

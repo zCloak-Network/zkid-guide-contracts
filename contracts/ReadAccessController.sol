@@ -32,7 +32,7 @@ contract ReadAccessController is Properties, Ownable, IChecker, IERC1363Receiver
 
 
     // TODO: if we use the universal threshold instead?
-    mapping(address => uint256) public customThreshold;
+    mapping(address => uint32) public customThreshold;
 
     // project address => Requirement
     mapping(address => Requirement) public rules;
@@ -81,9 +81,9 @@ contract ReadAccessController is Properties, Ownable, IChecker, IERC1363Receiver
     }
 
     // TODO: do we need to allow project to customize the threshold
-    function threshold(address _project) public view returns (uint256) {
-        uint defaultThreshold = registry.uintOf(Properties.UINT_APPROVE_THRESHOLD);
-        uint cThreshold = customThreshold[_project];
+    function threshold(address _project) public view returns (uint32) {
+        uint32 defaultThreshold = registry.uint32Of(Properties.UINT32_THRESHOLD);
+        uint32 cThreshold = customThreshold[_project];
         if ( cThreshold > defaultThreshold) {
             return cThreshold;
         } else {
@@ -95,7 +95,7 @@ contract ReadAccessController is Properties, Ownable, IChecker, IERC1363Receiver
        
         IRawChecker proofContract = IRawChecker(registry.addressOf(Properties.CONTRACT_MAIN_KILT));
         (bytes32 rootHash, uint256 count) = proofContract.credentialProcess(_who, _cType); 
-        uint256 threshold = threshold(msg.sender);
+        uint32 threshold = threshold(msg.sender);
         if (count < threshold) {
             return false;
         }

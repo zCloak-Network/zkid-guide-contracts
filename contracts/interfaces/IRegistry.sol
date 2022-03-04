@@ -5,6 +5,8 @@ interface IRegistry {
 
     function uintOf(bytes32 _propertyName) external view returns (uint256);
 
+    function uint32Of(bytes32 _propertyName) external view returns (uint32);
+
     function stringOf(bytes32 _propertyName) external view returns (string memory);
 
     function addressOf(bytes32 _propertyName) external view returns (address);
