@@ -13,8 +13,8 @@ contract Properties {
     bytes32 public constant CONTRACT_ORACLE = "CONTRACT_ORACLE"; 
     // the reputation record of workers
     bytes32 public constant CONTRACT_REPUTATION = "CONTRACT_REPUTATION";
-    // uint256
-    bytes32 public constant UINT_APPROVE_THRESHOLD = "UINT_APPROVE_THRESHOLD";
-    bytes32 public constant UINT_MAX_TRUSTED_PROVIDERS = "UINT_MAX_TRUSTED_PROVIDERS";
-
+    // minimum commit submission number
+    bytes32 public constant UINT32_MIN_COMMIT = "UINT32_MIN_COMMIT";
+    // minimum threshold that could be used to decide the data validity
+    bytes32 public constant UINT32_THRESHOLD = "UINT32_THRESHOLD";
 }

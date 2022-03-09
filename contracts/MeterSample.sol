@@ -3,6 +3,12 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/IMeter.sol";
 
+
+/**
+ * @title The collaboration 
+ * @notice each node worker will commit the hash first and 
+ * then reveal the answer later.
+ */
 contract MeterSample is IMeter {
 
     uint256 public expiration;
