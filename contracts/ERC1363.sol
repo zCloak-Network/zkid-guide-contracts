@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
-import "./interfaces//IERC1363.sol";
+import "./interfaces/IERC1363.sol";
 import "./interfaces/IERC1363Receiver.sol";
 import "./interfaces/IERC1363Spender.sol";
 

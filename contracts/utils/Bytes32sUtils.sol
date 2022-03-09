@@ -2,22 +2,22 @@
 
 pragma solidity ^0.8.0;
 
-library Bytes32Array {
+library Bytes32sUtils {
 
-    struct Bytes32s {
+    struct Bytes32List {
         bytes32[] internalBytes32s;
         mapping(bytes32 => uint) index;
     }
 
     /// @dev Test function: judging array index and mapping variable whether equal or not
-    function judgeEqual(Bytes32s storage _bytes32Array, uint _num, bytes32 _bytes32) view public returns (bool) {
+    function judgeEqual(Bytes32List storage _bytes32Array, uint _num, bytes32 _bytes32) view public returns (bool) {
         if (_bytes32Array.internalBytes32s[_bytes32Array.index[_bytes32]] == _bytes32Array.internalBytes32s[_num]) {
             return true;
         }
         return false;
     }
 
-    function _addBytes32(Bytes32s storage _bytes32Array, bytes32 _bytes32) internal returns (bool) {
+    function _addBytes32(Bytes32List storage _bytes32Array, bytes32 _bytes32) internal returns (bool) {
         require(!exists(_bytes32Array, _bytes32), "Already exists");
         uint length = _bytes32Array.internalBytes32s.length;
         _bytes32Array.internalBytes32s.push(_bytes32);
@@ -26,7 +26,7 @@ library Bytes32Array {
     }
 
     // TODO: need test
-    function _deleteAddress(Bytes32s storage _bytes32Array, bytes32 _bytes32) internal returns (bool) {
+    function _deleteAddress(Bytes32List storage _bytes32Array, bytes32 _bytes32) internal returns (bool) {
         require(exists(_bytes32Array, _bytes32), "Does not exist");
         uint index = _bytes32Array.index[_bytes32];
         uint length =  _bytes32Array.internalBytes32s.length;
@@ -39,7 +39,7 @@ library Bytes32Array {
         return true;
     }
 
-    function exists(Bytes32s storage _bytes32Array, bytes32 _bytes32) public view returns (bool) {
+    function exists(Bytes32List storage _bytes32Array, bytes32 _bytes32) public view returns (bool) {
         if (_bytes32Array.internalBytes32s.length == 0) {
             return false;
         } else {

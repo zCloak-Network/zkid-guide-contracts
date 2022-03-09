@@ -4,18 +4,22 @@ pragma solidity ^0.8.0;
 import "./common/Properties.sol";
 import "./common/AuthControl.sol";
 import "./interfaces/IRegistry.sol";
-
+import "./utils/AddressesUtils.sol";
+import "./utils/Bytes32sUtils.sol";
 
 /**
- * @title Where zCloak-worker submit the verification result
+ * @title the commit/reaveal aggregator.
+ * Where zCloak-worker submit the verification result
  * @notice each node worker will commit the hash first and 
  * then reveal the answer later.
  */
-contract Aggregator is Properties, AuthControl {
+contract CRAggregator is Properties, AuthControl {
+
+    using AddressesUtils for AddressesUtils.Addresses;
+    using Bytes32sUtils for Bytes32sUtils.Bytes32List;
 
     enum Stage {
-        // TODO: need this status?
-        NotStart,
+        Created,
         Commit,
         Reveal,
         Close
@@ -27,12 +31,23 @@ contract Aggregator is Properties, AuthControl {
         bytes32 attester;
     }
 
+    // record the voted worker and the vote count in total
+    struct Vote {
+        AddressesUtils.Addresses workers;
+        uint32 voteCount;
+    }
+
     struct RoundDetails {
         Stage stage;
+        // stage1: worker => commitHash
         mapping(address => bytes32) commits;
+        // stage status => submissions counts
         mapping(Stage => uint32) submissions;
+        // stage2: fingerprint hash of the verification (outputId) => verifyDetail
+        // outputId = hash(rootHash, isPassed, attesterAccount) 
         mapping(bytes32 => VerifyOutput) outputId;
-        mapping(bytes32 => uint32) outputVotes;
+        Bytes32sUtils.Bytes32List outputIds;
+        mapping(bytes32 => Vote) votes;
         uint32 minCommitSubmissions;
         uint32 threshold;
     }
@@ -52,8 +67,8 @@ contract Aggregator is Properties, AuthControl {
 
     // user => requestHash => rounddetails
     mapping(address => mapping(bytes32 => RoundDetails)) rounds;
-    // user => requestHash => attester => isPassed
-    mapping(address => mapping(bytes32 => mapping(bytes32 => bool))) zkCredential;
+    // user => requestHash => isPassed
+    mapping(address => mapping(bytes32 => bool)) zkCredential;
     // worker => VerifyRecord
     mapping(address => VerifyRecord) workerActivities;
 
@@ -61,7 +76,16 @@ contract Aggregator is Properties, AuthControl {
     event CommitEnd(address cOwner, bytes32 requestHash);
 
     event Reveal(address cOwner, bytes32 requestHash, address worker, bytes32 attester, bool isPassed);
-    event Canonical(address cOwner, bytes32 requestHash, bytes32 attester, bool isPassed);
+    event Canonical(address cOwner, bytes32 requestHash, bool isPassed);
+
+
+    constructor(
+        address _registry,
+        address _aggregator
+    ) public {
+        registry = IRegistry(_registry);
+    }
+
 
     // limit the caller within worker set
     function submit_commit(
@@ -70,9 +94,9 @@ contract Aggregator is Properties, AuthControl {
         bytes32 _commitHash
     ) auth() public {
         RoundDetails storage round = rounds[_cOwner][_requestHash];
-        require(round.stage != Stage.Reveal, "In Reveal, commits not accepted.");
+        require(round.stage == Stage.Created || round.stage == Stage.Commit, "commits are now not accepted.");
         // initialize
-        if (round.stage == Stage.NotStart) {
+        if (round.stage == Stage.Created) {
             round.stage = Stage.Commit;
             // round config
             uint32 minCommit = registry.uint32Of(Properties.UINT32_MIN_COMMIT);
@@ -126,20 +150,27 @@ contract Aggregator is Properties, AuthControl {
              output.rootHash = _rootHash;
              output.isPassed = _verifyRes;
              output.attester = _attester;
+             // add new element
+             round.outputIds._addBytes32(outputHash);
         }
 
-        // vote for the result
-        round.outputVotes[outputHash] += 1;
-        
+        // update votes
+        Vote storage vote = round.votes[outputHash];
+        vote.workers._addAddress(msg.sender);
+        vote.voteCount += 1;
+
         emit Reveal(_cOwner, _requestHash, msg.sender, _attester, _verifyRes);
         uint32 threshold = round.threshold;
-        if (round.outputVotes[outputHash] >= threshold) {
+        // TODO: reward/punishment
+        if (vote.voteCount >= threshold) {
             round.stage = Stage.Close;
-            zkCredential[_cOwner][_requestHash][_attester] = _verifyRes;
+            zkCredential[_cOwner][_requestHash] = _verifyRes;
 
-            emit Canonical(_cOwner, _requestHash, _attester, _verifyRes);
+            emit Canonical(_cOwner, _requestHash, _verifyRes);
         }
     }
+
+
 
 }
  

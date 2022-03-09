@@ -3,11 +3,8 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/IMeter.sol";
 
-
 /**
- * @title The collaboration 
- * @notice each node worker will commit the hash first and 
- * then reveal the answer later.
+ * @title How other project is gonna use the onchain kyc info 
  */
 contract MeterSample is IMeter {
 
