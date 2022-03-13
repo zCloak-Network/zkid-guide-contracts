@@ -9,17 +9,22 @@ library AddressesUtils {
         mapping(address => uint) index;
     }
 
-    function _addAddress(Addresses storage _addresses, address _addr) internal returns (bool) {
-        require(!exists(_addresses, _addr), "Already exists");
+    // do not revert the tx
+    function _addAddress(Addresses storage _addresses, address _addr) internal {
+        if (exists(_addresses, _addr)) {
+            return;
+        }
         uint length = _addresses.addresses.length;
         _addresses.addresses.push(_addr);
         _addresses.index[_addr] = length;
-        return true;
     }
 
     // TODO: need test
-    function _deleteAddress(Addresses storage _addresses, address _addr) internal returns (bool) {
-        require(exists(_addresses, _addr), "Does not exist");
+    function _deleteAddress(Addresses storage _addresses, address _addr) internal {
+         if (!exists(_addresses, _addr)) {
+            return;
+        }
+
         uint index = _addresses.index[_addr];
         uint length =  _addresses.addresses.length;
         address lastAddr = _addresses.addresses[length - 1];
@@ -28,7 +33,6 @@ library AddressesUtils {
         // change index of the last element
         _addresses.index[lastAddr] = index;
         _addresses.addresses.pop();
-        return true;
     }
 
     function exists(Addresses storage _addresses, address _addr) public view returns (bool) {

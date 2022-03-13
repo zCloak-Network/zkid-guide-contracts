@@ -1,7 +1,4 @@
 // SPDX-License-Identifier: MIT
-
-/// This used to be the whitelist contract for filtering worker.
-
 pragma solidity ^0.8.0;
 
 import "./interfaces/IAuthority.sol";
@@ -9,11 +6,16 @@ import "./interfaces/IRegistry.sol";
 import "./common/Properties.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract KiltProofsAuth is Ownable, IAuthority, Properties {
+/**
+ * @title Control the CRAggregator's function calls.
+ * @notice worker can submitCommit and submitReveal
+ *  and ReadAccessController can read isValid
+ */
+ //TODO: logic needs update.
+contract AggregatorAuth is Ownable, IAuthority, Properties {
 
-    bytes4 constant WRITE_ADD_V_SIG =  bytes4(keccak256("addVerification(address,bytes32,bytes32,bytes32,bool)"));
+    // TODO: need update
     bytes4 constant READ_IS_VALID_SIG = bytes4(keccak256("isValid(address,bytes32)"));
-    bytes4 constant READ_IS_PASSED_SIG = bytes4(keccak256("isPassed(address,bytes32,bytes32)"));
 
     uint256 workerCount;
 
@@ -47,8 +49,7 @@ contract KiltProofsAuth is Ownable, IAuthority, Properties {
      function canCall(
         address _src, address _dst, bytes4 _sig
     ) override public view returns (bool) {
-        return ( isWorker[_src] && _sig == WRITE_ADD_V_SIG ) 
-        || (isOracle(_src) && (_sig == READ_IS_VALID_SIG || _sig == READ_IS_PASSED_SIG));
+        return ( isWorker[_src] && _sig == READ_IS_VALID_SIG );
     }
 
 }
