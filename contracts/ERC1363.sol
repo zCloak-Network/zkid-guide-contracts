@@ -12,7 +12,6 @@ import "./interfaces/IERC1363Spender.sol";
 
 /**
  * @title ERC1363
- * @author Vittorio Minacori (https://github.com/vittominacori)
  * @dev Implementation of an ERC1363 interface
  */
 abstract contract ERC1363 is ERC20, IERC1363, ERC165 {
@@ -128,11 +127,13 @@ abstract contract ERC1363 is ERC20, IERC1363, ERC165 {
         uint256 amount,
         bytes memory data
     ) internal virtual returns (bool) {
-        if (!recipient.isContract()) {
-            return false;
+
+        if (recipient.isContract()) {
+            bytes4 retval = IERC1363Receiver(recipient).onTransferReceived(_msgSender(), sender, amount, data);
+            return (retval == IERC1363Receiver(recipient).onTransferReceived.selector);
         }
-        bytes4 retval = IERC1363Receiver(recipient).onTransferReceived(_msgSender(), sender, amount, data);
-        return (retval == IERC1363Receiver(recipient).onTransferReceived.selector);
+
+        return true;
     }
 
     /**
@@ -148,10 +149,12 @@ abstract contract ERC1363 is ERC20, IERC1363, ERC165 {
         uint256 amount,
         bytes memory data
     ) internal virtual returns (bool) {
-        if (!spender.isContract()) {
-            return false;
+
+        if (spender.isContract()) {
+           bytes4 retval = IERC1363Spender(spender).onApprovalReceived(_msgSender(), amount, data);
+            return (retval == IERC1363Spender(spender).onApprovalReceived.selector);
         }
-        bytes4 retval = IERC1363Spender(spender).onApprovalReceived(_msgSender(), amount, data);
-        return (retval == IERC1363Spender(spender).onApprovalReceived.selector);
+
+        return true;
     }
 }

@@ -4,6 +4,9 @@ pragma solidity ^0.8.0;
 import "./common/Properties.sol";
 import "./common/AuthControl.sol";
 import "./interfaces/IRegistry.sol";
+import "./interfaces/IChecker.sol";
+import "./interfaces/IReward.sol";
+import "./interfaces/IRequest.sol";
 import "./utils/AddressesUtils.sol";
 import "./utils/Bytes32sUtils.sol";
 
@@ -13,7 +16,7 @@ import "./utils/Bytes32sUtils.sol";
  * @notice each node worker will commit the hash first and 
  * then reveal the answer later.
  */
-contract CRAggregator is Properties, AuthControl {
+contract CRAggregator is Properties, AuthControl, IChecker {
 
     using AddressesUtils for AddressesUtils.Addresses;
     using Bytes32sUtils for Bytes32sUtils.Bytes32List;
@@ -47,6 +50,7 @@ contract CRAggregator is Properties, AuthControl {
         // outputId = hash(rootHash, isPassed, attesterAccount) 
         mapping(bytes32 => VerifyOutput) outputId;
         Bytes32sUtils.Bytes32List outputIds;
+        // outputHash => Vote
         mapping(bytes32 => Vote) votes;
         uint32 minCommitSubmissions;
         uint32 threshold;
@@ -65,10 +69,18 @@ contract CRAggregator is Properties, AuthControl {
     // registry where we query global settings
     IRegistry public registry;
 
-    // user => requestHash => rounddetails
+    // user => requestHash => roundDetails
     mapping(address => mapping(bytes32 => RoundDetails)) rounds;
+
     // user => requestHash => isPassed
     mapping(address => mapping(bytes32 => bool)) zkCredential;
+
+    // user => requestHash => rootHash
+    mapping(address => mapping(bytes32 => bytes32)) public addr2Root;
+
+    // rootHash => user
+    mapping(bytes32 => address) did;
+
     // worker => VerifyRecord
     mapping(address => VerifyRecord) workerActivities;
 
@@ -88,7 +100,7 @@ contract CRAggregator is Properties, AuthControl {
 
 
     // limit the caller within worker set
-    function submit_commit(
+    function submitCommit(
         address _cOwner,
         bytes32 _requestHash,
         bytes32 _commitHash
@@ -103,6 +115,9 @@ contract CRAggregator is Properties, AuthControl {
             uint32 threshold = registry.uint32Of(Properties.UINT32_THRESHOLD);
             round.minCommitSubmissions = minCommit;
             round.threshold = threshold;
+
+            IRequest request = IRequest(registry.addressOf(Properties.CONTRACT_REQUEST));
+            request.updateRequestStatus(_requestHash, true);
         }
         // enable worker to change its commit in Commit stage
         round.commits[msg.sender] = _commitHash;
@@ -122,7 +137,7 @@ contract CRAggregator is Properties, AuthControl {
     }
 
 
-    function submit_reveal(
+    function submitReveal(
         address _cOwner,
         bytes32 _requestHash,
         bytes32 _rootHash,
@@ -140,6 +155,7 @@ contract CRAggregator is Properties, AuthControl {
         
         if (hash != round.commits[msg.sender]) {
             // TODO: punish with reputation
+
             return;
         }
 
@@ -159,15 +175,28 @@ contract CRAggregator is Properties, AuthControl {
         vote.workers._addAddress(msg.sender);
         vote.voteCount += 1;
 
-        emit Reveal(_cOwner, _requestHash, msg.sender, _attester, _verifyRes);
+
+
         uint32 threshold = round.threshold;
         // TODO: reward/punishment
         if (vote.voteCount >= threshold) {
             round.stage = Stage.Close;
             zkCredential[_cOwner][_requestHash] = _verifyRes;
+            // TODO: how to manage kyc info updates?
+            {
+                require(did[_rootHash] == address(0) || did[_rootHash] == _cOwner, "Err: rootHash already claimed");
 
+                addr2Root[_cOwner][_requestHash] = _rootHash;
+                did[_rootHash] = _cOwner;
+            }
             emit Canonical(_cOwner, _requestHash, _verifyRes);
         }
+
+        emit Reveal(_cOwner, _requestHash, msg.sender, _attester, _verifyRes);
+    }
+
+    function isValid(address _who, bytes32 _requestHash) override external view returns (bool) {
+        return zkCredential[_who][_requestHash];
     }
 
 

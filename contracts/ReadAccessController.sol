@@ -5,15 +5,19 @@ import "./common/Properties.sol";
 import "./common/AuthControl.sol";
 import "./interfaces/IRegistry.sol";
 import "./interfaces/IChecker.sol";
-import "./interfaces/IRawChecker.sol";
 import "./interfaces/IERC1363Receiver.sol";
-import "./interfaces/IMeter.sol";
 import "./utils/AddressesUtils.sol";
 
 
-// Rule Registry for the project who needs users' on-chain s
-// protected  kyc info.
-// And this contract serves as the read gateway for the kyc info.
+/**
+ * @title ReadAccessController serves as:
+ * 1. Rule Registry for the project who needs users' on-chain
+ *    protected kyc info.
+ * 2. management of request info and request status
+ * 3. The read gateway for the kyc info.
+ * @notice worker can submitCommit and submitReveal
+    and ReadAccessController can read isValid
+ */
 contract ReadAccessController is Properties, AuthControl, IChecker, IERC1363Receiver {
 
     using AddressesUtils for AddressesUtils.Addresses;
@@ -32,14 +36,29 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IERC1363Rece
         bytes32 attester;
     }
 
+    struct Meter {
+        uint256 perVisitFee;
+        // using native token like ETH if token is address(0) 
+        // do not use this to determine the access
+        address token;
+    }
+
     // requestHash => RequestDetail
     mapping(bytes32 => RequestDetail) public requestInfo;
     // requestHash => project => meter
-    mapping(bytes32 => mapping(address => address)) public applied;
+    mapping(bytes32 => mapping(address => Meter)) public applied;
 
-    event AddRule(address project, bytes32 requestHash, address meter);
+    event AddRule(address project, bytes32 requestHash, address token, uint256 perVisitFee);
     event DeleteRule(address project, bytes32 requestHash);
 
+
+    constructor(
+        address _registry,
+        address _aggregator
+    ) {
+        registry = IRegistry(_registry);
+        aggregator = IChecker(_aggregator);
+    }
 
 
 
@@ -57,7 +76,7 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IERC1363Rece
         require(requestInfo[requestHash].cType == bytes32(0), "Already Initlaized");
 
         // start to initlaize
-          // modify request
+        // modify request
         RequestDetail storage request = requestInfo[requestHash];
         request.cType = _cType;
         request.fieldName = _fieldName;
@@ -66,8 +85,11 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IERC1363Rece
         request.attester = _attester;
     }
 
-    function applyRequest(bytes32 _requestHash, address _project, address _meter) onlyOwner() public {
-        applied[_requestHash][_project] = _meter;
+
+    function applyRequest(bytes32 _requestHash, address _project, address _token, uint256 _perVisitFee) onlyOwner() public {
+        Meter storage meter = applied[_requestHash][_project];
+        meter.token = _token;
+        meter.perVisitFee = _perVisitFee;
     }
 
 
@@ -81,79 +103,53 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IERC1363Rece
         rHash = keccak256(abi.encodePacked(_cType, _fieldName, _programHash, _expResult, _attester));
     }
 
-    function accessible(address _operator, bytes32 _requestHash) public view returns (bool) {
-        
-    }
-
-    constructor(
-        address _registry,
-        address _aggregator
-    ) public {
-        registry = IRegistry(_registry);
-        aggregator = IChecker(_aggregator);
-    }
-
 
     modifier accessAllowed(address _caller, bytes32 _requestHash) {
-         require(applied[_requestHash][_caller] != address(0) || _caller == address(this), "No Access");
+         require(applied[_requestHash][_caller].perVisitFee != 0 || _caller == address(this), "No Access");
          _;
-    }          
+    } 
 
     
     // read data from aggregator
-    function isValid(address _who, bytes32 _requestHash) accessAllowed(msg.sender, _requestHash) override public view returns (bool) {
+    function isValid(address _who, bytes32 _requestHash) accessAllowed(msg.sender, _requestHash) override external view returns (bool) {
         return aggregator.isValid(_who, _requestHash);
     }
 
-
+    // project will use `transferFromAndCall` in high probability
+    // msg.sender should be token
     function onTransferReceived(
-        address _operator, // the msg sender
+        address _operator, // project
         address _sender, // user
         uint256 _amount,
         bytes calldata data
     ) override external returns (bytes4) {
-        if (msg.sender != _operator) {
-            // wrong sender
-            return bytes4(0);
-        }
  
         // TODO: deserialize data?
         // 1. where to get the user address 
         //  `_sender` or retrieve it from `data`
         // 2. specify the revoked function in data or 'hardcode' it?
         bytes32 requestHash;
-        address token;
            assembly {
                let ptr := mload(0x40)
                 calldatacopy(ptr, 0, calldatasize())
-                token := mload(add(ptr, 0x80)) 
                 requestHash := mload(add(ptr, 0x100))
            }
 
-            IMeter meter = IMeter(applied[requestHash][_operator]);
-            (uint expiration, address tokenExp, uint perVisit) = meter.meter();
+            Meter storage meter = applied[requestHash][_operator];
+            address tokenExp = meter.token;
+            uint256 perVisit = meter.perVisitFee;
+
             
-            require(token == tokenExp, "Wrong Payment");
-            // if the project is not charged on time
-            if (expiration == 0) {
-                // make sure this visit is paid correctly
-                require(_operator == token, "Wrong token kind");
-                require(_amount >= perVisit, "Fee to low");
-            } else {
-                // charge on time
-                require(expiration >= block.timestamp, "Expired!");
-            }
+            require(tokenExp == msg.sender || _amount >= perVisit, "Wrong Payment");
 
-            // transfer reward token to reward pool
-            
+            // TODO: transfer reward token to reward pool
 
-           bool res = isValid(_sender, requestHash);
-
+           bool res = this.isValid(_sender, requestHash);
+            // charge if the user is verified true
            if (res) {
                return IERC1363Receiver(this).onTransferReceived.selector;
            } else {
                return bytes4(0);
            }
-
     }
 }
