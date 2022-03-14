@@ -39,11 +39,6 @@ contract AggregatorAuth is Ownable, IAuthority, Properties {
         emit AddWorker(_worker);
     }
 
-    function isOracle(address _addr) public view returns (bool) {
-        address oracle = registry.addressOf(Properties.CONTRACT_ORACLE);
-        return _addr == oracle;
-    } 
-
     // worker can invoke addVerification
     // Oracle can read through isPassed and isValid
      function canCall(

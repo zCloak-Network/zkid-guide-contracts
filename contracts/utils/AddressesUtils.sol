@@ -44,6 +44,11 @@ library AddressesUtils {
        
     }
 
+    /// get address length
+    function length(Addresses storage _addresses) view public returns (uint256) {
+        return _addresses.addresses.length;
+    }
+
     /// @dev Test function: judging array index and mapping variable whether equal or not
     function judgeEqual(Addresses storage _addresses, uint _num, address _project) view public returns (bool) {
         if (_addresses.addresses[_addresses.index[_project]] == _addresses.addresses[_num]) {
@@ -60,10 +65,5 @@ library AddressesUtils {
     /// @dev Test function: get member mapping variable of struct Addresses
     function getIndex(Addresses storage _addresses, address _project) view public returns (uint256) {
         return _addresses.index[_project];
-    }
-
-    /// @dev Test function: get address length
-    function getArrayLength(Addresses storage _addresses) view public returns (uint256) {
-        return _addresses.addresses.length;
     }
 }

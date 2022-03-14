@@ -5,6 +5,7 @@ import "./common/Properties.sol";
 import "./common/AuthControl.sol";
 import "./interfaces/IRegistry.sol";
 import "./interfaces/IChecker.sol";
+import "./interfaces/IERC1363.sol";
 import "./interfaces/IERC1363Receiver.sol";
 import "./utils/AddressesUtils.sol";
 
@@ -121,7 +122,7 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IERC1363Rece
         address _operator, // project
         address _sender, // user
         uint256 _amount,
-        bytes calldata data
+        bytes calldata _data
     ) override external returns (bytes4) {
  
         // TODO: deserialize data?
@@ -142,7 +143,10 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IERC1363Rece
             
             require(tokenExp == msg.sender || _amount >= perVisit, "Wrong Payment");
 
-            // TODO: transfer reward token to reward pool
+            // transfer reward token to reward pool
+            address rewardPool = registry.addressOf(Properties.CONTRACT_REWARD);
+            // _data must be requestHash
+            IERC1363(tokenExp).transferAndCall(rewardPool, _amount, _data);
 
            bool res = this.isValid(_sender, requestHash);
             // charge if the user is verified true
