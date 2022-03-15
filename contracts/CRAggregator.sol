@@ -40,6 +40,12 @@ contract CRAggregator is Properties, AuthControl, IChecker {
         uint32 voteCount;
     }
 
+    struct Final {
+        bool isPassed;
+        // when to reach the final result
+        uint256 agreeAt;
+    }
+
     struct RoundDetails {
         Stage stage;
         // stage1: worker => commitHash
@@ -72,8 +78,8 @@ contract CRAggregator is Properties, AuthControl, IChecker {
     // user => requestHash => roundDetails
     mapping(address => mapping(bytes32 => RoundDetails)) rounds;
 
-    // user => requestHash => isPassed
-    mapping(address => mapping(bytes32 => bool)) zkCredential;
+    // user => requestHash => Final
+    mapping(address => mapping(bytes32 => Final)) zkCredential;
 
     // user => requestHash => rootHash
     mapping(address => mapping(bytes32 => bytes32)) public addr2Root;
@@ -107,6 +113,13 @@ contract CRAggregator is Properties, AuthControl, IChecker {
     ) auth() public {
         RoundDetails storage round = rounds[_cOwner][_requestHash];
         require(round.stage == Stage.Created || round.stage == Stage.Commit, "commits are now not accepted.");
+        
+        // remove the expired credential
+        if (block.timestamp > zkCredential[_cOwner][_requestHash].agreeAt) {
+            zkCredential[_cOwner][_requestHash].isPassed = false;
+            zkCredential[_cOwner][_requestHash].agreeAt = 0;
+        }
+        
         // initialize
         if (round.stage == Stage.Created) {
             round.stage = Stage.Commit;
@@ -115,10 +128,8 @@ contract CRAggregator is Properties, AuthControl, IChecker {
             uint32 threshold = registry.uint32Of(Properties.UINT32_THRESHOLD);
             round.minCommitSubmissions = minCommit;
             round.threshold = threshold;
-
-            IRequest request = IRequest(registry.addressOf(Properties.CONTRACT_REQUEST));
-            request.updateRequestStatus(_requestHash, true);
         }
+
         // enable worker to change its commit in Commit stage
         round.commits[msg.sender] = _commitHash;
         round.submissions[Stage.Commit] += 1;
@@ -192,7 +203,8 @@ contract CRAggregator is Properties, AuthControl, IChecker {
     // reach the final result
     function _agree(bytes32 _requestHash, address _cOwner, bool _verifyRes, bytes32 _rootHash, IReputation _reputation, bytes32 _outputHash, RoundDetails storage _round) internal {
         _round.stage = Stage.Close;
-        zkCredential[_cOwner][_requestHash] = _verifyRes;
+        zkCredential[_cOwner][_requestHash].isPassed = _verifyRes;
+        zkCredential[_cOwner][_requestHash].agreeAt = block.timestamp;
         // TODO: how to manage kyc info updates?
         {
             require(did[_rootHash] == address(0) || did[_rootHash] == _cOwner, "Err: rootHash already claimed");
@@ -218,7 +230,7 @@ contract CRAggregator is Properties, AuthControl, IChecker {
     }
 
     function isValid(address _who, bytes32 _requestHash) override external view returns (bool) {
-        return zkCredential[_who][_requestHash];
+        return zkCredential[_who][_requestHash].isPassed;
     }
 
 

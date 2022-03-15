@@ -3,5 +3,22 @@ pragma solidity ^0.8.0;
 
 interface IRequest {
 
-    function updateRequestStatus(bytes32 requestHash, bool isInService) external;
+    function initializeRequest(
+        bytes32 cType,
+        string calldata fieldName,
+        bytes32 programHash,
+        bool expResult,
+        bytes32 attester
+    ) external;
+
+    // if a requestHash has been initialized
+    function exists(bytes32 requestHash) external view returns (bool);
+
+    function getRequestHash(
+        bytes32 cType,
+        string calldata fieldName,
+        bytes32 programHash,
+        bool expResult,
+        bytes32 attester
+    ) external returns (bytes32);
 }

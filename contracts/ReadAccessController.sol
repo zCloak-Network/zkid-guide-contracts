@@ -7,6 +7,7 @@ import "./interfaces/IRegistry.sol";
 import "./interfaces/IChecker.sol";
 import "./interfaces/IERC1363.sol";
 import "./interfaces/IERC1363Receiver.sol";
+import "./interfaces/IRequest.sol";
 import "./utils/AddressesUtils.sol";
 
 
@@ -19,15 +20,13 @@ import "./utils/AddressesUtils.sol";
  * @notice worker can submitCommit and submitReveal
     and ReadAccessController can read isValid
  */
-contract ReadAccessController is Properties, AuthControl, IChecker, IERC1363Receiver {
+contract ReadAccessController is Properties, AuthControl, IChecker, IRequest, IERC1363Receiver {
 
     using AddressesUtils for AddressesUtils.Addresses;
 
     IRegistry public registry;
     IChecker public aggregator;
 
-    // reward pool 
-    address pool;
 
     struct RequestDetail {
         bytes32 cType;
@@ -70,7 +69,7 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IERC1363Rece
         bytes32 _programHash,
         bool _expResult,
         bytes32 _attester
-    ) auth() public {
+    ) auth() override external {
 
         bytes32 requestHash = getRequestHash(_cType, _fieldName, _programHash, _expResult, _attester);
         // must be the first time to add info
@@ -84,6 +83,7 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IERC1363Rece
         request.programHash = _programHash;
         request.expResult = _expResult;
         request.attester = _attester;
+        // TODO: add event
     }
 
 
@@ -91,6 +91,7 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IERC1363Rece
         Meter storage meter = applied[_requestHash][_project];
         meter.token = _token;
         meter.perVisitFee = _perVisitFee;
+        // TODO: add event
     }
 
 
@@ -100,8 +101,13 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IERC1363Rece
         bytes32 _programHash,
         bool _expResult,
         bytes32 _attester
-    ) public pure returns (bytes32 rHash) {
+    ) override public pure returns (bytes32 rHash) {
         rHash = keccak256(abi.encodePacked(_cType, _fieldName, _programHash, _expResult, _attester));
+    }
+
+    // To check if a requestHash has been initlized
+    function exists(bytes32 _requestHash) override external view returns (bool) {
+        return requestInfo[_requestHash].cType != bytes32(0);
     }
 
 
@@ -116,11 +122,11 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IERC1363Rece
         return aggregator.isValid(_who, _requestHash);
     }
 
-    // project will use `transferFromAndCall` in high probability
+    // project will use `transferFromAndCall(user, rac, amount, data)` or `transferAndCall(rac, amount, data)`
     // msg.sender should be token
     function onTransferReceived(
         address _operator, // project
-        address _sender, // user
+        address _sender, // user/project
         uint256 _amount,
         bytes calldata _data
     ) override external returns (bytes4) {
@@ -130,30 +136,29 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IERC1363Rece
         //  `_sender` or retrieve it from `data`
         // 2. specify the revoked function in data or 'hardcode' it?
         bytes32 requestHash;
-           assembly {
-               let ptr := mload(0x40)
-                calldatacopy(ptr, 0, calldatasize())
-                requestHash := mload(add(ptr, 0x100))
-           }
+        assembly {
+            let ptr := mload(0x40)
+            calldatacopy(ptr, 0, calldatasize())
+            requestHash := mload(add(ptr, 0x100))
+        }
 
-            Meter storage meter = applied[requestHash][_operator];
-            address tokenExp = meter.token;
-            uint256 perVisit = meter.perVisitFee;
+        Meter storage meter = applied[requestHash][_operator];
+        address tokenExp = meter.token;
+        uint256 perVisit = meter.perVisitFee;
+    
+        require(tokenExp == msg.sender || _amount >= perVisit, "Wrong Payment");
 
-            
-            require(tokenExp == msg.sender || _amount >= perVisit, "Wrong Payment");
+        // transfer reward token to reward pool
+        address rewardPool = registry.addressOf(Properties.CONTRACT_REWARD);
+        // _data must be requestHash
+        require(IERC1363(tokenExp).transferAndCall(rewardPool, _amount, _data));
 
-            // transfer reward token to reward pool
-            address rewardPool = registry.addressOf(Properties.CONTRACT_REWARD);
-            // _data must be requestHash
-            IERC1363(tokenExp).transferAndCall(rewardPool, _amount, _data);
-
-           bool res = this.isValid(_sender, requestHash);
-            // charge if the user is verified true
-           if (res) {
-               return IERC1363Receiver(this).onTransferReceived.selector;
-           } else {
-               return bytes4(0);
-           }
+        bool res = this.isValid(_sender, requestHash);
+        // charge if the user is verified true
+        if (res) {
+            return IERC1363Receiver(this).onTransferReceived.selector;
+        } else {
+            return bytes4(0);
+        }
     }
 }

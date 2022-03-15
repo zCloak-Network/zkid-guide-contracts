@@ -49,9 +49,8 @@ contract Reputation is IERC1363Receiver, IReputation, AuthControl, Properties {
 
     // to record how many tasks that worker has done which
     // attached with no reward.
-    // TODO: any way that user could ddos worker??
     // TODO: change this to requestHash => worker => rcommunityRputation
-    mapping(address => int128) communityReputations;
+    mapping(bytes32 => mapping(address => int128)) communityReputations;
 
     // emit when worker successfully claim the reward
     // Claim(token, amount, worker)
@@ -113,7 +112,6 @@ contract Reputation is IERC1363Receiver, IReputation, AuthControl, Properties {
     }
 
 
-
     function withdrawable(bytes32 _requestHash, address _token, address _worker) public view returns (uint256) {
         IndividualReputation storage individualR = individuals[_requestHash][_worker];
 
@@ -126,16 +124,17 @@ contract Reputation is IERC1363Receiver, IReputation, AuthControl, Properties {
     function punish(bytes32 _requestHash, address _worker) auth() override public {
         AddressesUtils.Addresses storage tokens = payments[_requestHash];
         IndividualReputation storage individualR = individuals[_requestHash][_worker];
-        
+        // this requestHash is not rewarded by any project
         if (tokens.length() == 0) {
-            communityReputations[_worker] += PUNISH;
+            communityReputations[_requestHash][_worker] += PUNISH;
         } else {
+        // rewarded by projects
             individualR.individualReputation += PUNISH;
         }
         
         reputations[_worker] += PUNISH;
 
-        emit Punish(_requestHash, _worker, individualR.individualReputation, communityReputations[_worker], reputations[_worker]);
+        emit Punish(_requestHash, _worker, individualR.individualReputation, communityReputations[_requestHash][_worker], reputations[_worker]);
     }
 
 
@@ -143,16 +142,29 @@ contract Reputation is IERC1363Receiver, IReputation, AuthControl, Properties {
 
         AddressesUtils.Addresses storage tokens = payments[_requestHash];
         IndividualReputation storage individualR = individuals[_requestHash][_worker];
-
+        // this requestHash is not rewarded by any project
         if (tokens.length() == 0 ) {
-            communityReputations[_worker] += REWARD;
+            communityReputations[_requestHash][_worker] += REWARD;
         } else {
+        // rewarded by projects
             individualR.individualReputation += REWARD;
         }
-        
+        // update total reputation
         reputations[_worker] += REWARD;
 
-        emit Reward(_requestHash, _worker, individualR.individualReputation, communityReputations[_worker], reputations [_worker]);
+        emit Reward(_requestHash, _worker, individualR.individualReputation, communityReputations[_requestHash][_worker], reputations [_worker]);
+    }
+
+
+    function transformReputation(bytes32 _requestHash) public {
+        AddressesUtils.Addresses storage tokens = payments[_requestHash];
+
+        if (tokens.length() > 0) {
+            int128 communtiyR = communityReputations[_requestHash][msg.sender];
+            individuals[_requestHash][msg.sender].individualReputation += communtiyR;
+            communityReputations[_requestHash][msg.sender] = 0;
+        }
+        // TODO: add event
     }
 
 
@@ -201,8 +213,15 @@ contract Reputation is IERC1363Receiver, IReputation, AuthControl, Properties {
         (bool _isLegal, uint withdrawableAmount) = totalToWithdraw.trySub(_individualR.claimedAmount[_token]);
 
         uint maxAmount = rewardPool[_requestHash][_token];
+       
         // can not exceed amount of tken in the reward pool 
-        uint withdraw = withdrawableAmount < maxAmount ? withdrawableAmount : maxAmount;
+        uint withdraw;
+        if (withdrawableAmount <= maxAmount) {
+            withdraw = withdrawableAmount;
+        } else {
+            withdraw = maxAmount;
+        }
+
         return withdraw ;
     }
 
