@@ -9,14 +9,6 @@ library Bytes32sUtils {
         mapping(bytes32 => uint) index;
     }
 
-    /// @dev Test function: judging array index and mapping variable whether equal or not
-    function judgeEqual(Bytes32List storage _bytes32Array, uint _num, bytes32 _bytes32) view public returns (bool) {
-        if (_bytes32Array.internalBytes32s[_bytes32Array.index[_bytes32]] == _bytes32Array.internalBytes32s[_num]) {
-            return true;
-        }
-        return false;
-    }
-
     function _addBytes32(Bytes32List storage _bytes32Array, bytes32 _bytes32) internal returns (bool) {
         require(!exists(_bytes32Array, _bytes32), "Already exists");
         uint length = _bytes32Array.internalBytes32s.length;
@@ -44,7 +36,18 @@ library Bytes32sUtils {
             return false;
         } else {
              return _bytes32Array.index[_bytes32] != 0 || _bytes32Array.internalBytes32s[0] == _bytes32;
+        }  
+    }
+
+    function length(Bytes32List storage _bytes32Array) public view returns (uint256) {
+        return _bytes32Array.internalBytes32s.length;
+    }
+
+        /// @dev Test function: judging array index and mapping variable whether equal or not
+    function judgeEqual(Bytes32List storage _bytes32Array, uint _num, bytes32 _bytes32) view public returns (bool) {
+        if (_bytes32Array.internalBytes32s[_bytes32Array.index[_bytes32]] == _bytes32Array.internalBytes32s[_num]) {
+            return true;
         }
-       
+        return false;
     }
 }

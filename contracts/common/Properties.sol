@@ -14,13 +14,17 @@ contract Properties {
     bytes32 public constant CONTRACT_REQUEST = "CONTRACT_REQUEST";
     // address of reputation
     // v0.1.0 - ReputationV1 
+    bytes32 public constant CONTRACT_REPUTATION = "CONTRACT_REPUTATION";
+    // address of reward pool
+    // v0.1.0 - ReputationV1 
     bytes32 public constant CONTRACT_REWARD = "CONTRACT_REWARD";
+    
     // address of whitelist which a registry book for workers
     bytes32 public constant CONTRACT_WHITELIST = "CONTRACT_WHITELIST";
-    // address of oracle contract
-    bytes32 public constant CONTRACT_ORACLE = "CONTRACT_ORACLE"; 
-    // the reputation record of workers
-    bytes32 public constant CONTRACT_REPUTATION = "CONTRACT_REPUTATION";
+    // address of contract which is in charge of the read access to user's onchain kyc
+    // v0.1.0 - ReadAccessController
+    bytes32 public constant CONTRACT_READ_GATEWAY = "CONTRACT_READ_GATEWAY"; 
+
 
     /**
     * uint
