@@ -98,8 +98,7 @@ contract CRAggregator is Properties, AuthControl, IChecker {
 
 
     constructor(
-        address _registry,
-        address _aggregator
+        address _registry
     ) public {
         registry = IRegistry(_registry);
     }
@@ -152,16 +151,17 @@ contract CRAggregator is Properties, AuthControl, IChecker {
     function submitReveal(
         address _cOwner,
         bytes32 _requestHash,
+        bytes32 _cType,
         bytes32 _rootHash,
         bool _verifyRes,
         bytes32 _attester
     ) auth() public {
         RoundDetails storage round = rounds[_cOwner][_requestHash];
-        require(round.stage == Stage.Reveal, "Must be in reveal stage");
+        require(round.stage == Stage.Reveal, "Err: Must be in reveal stage");
         IReputation reputation = IReputation(registry.addressOf(Properties.CONTRACT_REPUTATION));
         // the worker can and only can submit only once
         VerifyRecord storage record = workerActivities[msg.sender];
-        require(record.submits[_cOwner][_requestHash] != 0, "Can not submit twice the same task");
+        require(record.submits[_cOwner][_requestHash] != 0, "Err: Can not submit twice the same task");
         // check commit hash
         // commitHash = hash(rootHash + isPassed + attesterAccount + workerAddress)
         bytes32 hash = keccak256(abi.encodePacked(_rootHash, _verifyRes, _attester, msg.sender));
@@ -171,6 +171,14 @@ contract CRAggregator is Properties, AuthControl, IChecker {
             reputation.punish(_requestHash, msg.sender);
             return;
         }
+
+        // check request metadata
+       {
+            IRequest request = IRequest(registry.addressOf(Properties.CONTRACT_REQUEST));
+            (bytes32 cType, bytes32 attester) = request.requestMetadata(_requestHash);
+
+            require((_cType == cType) && (_attester == attester), "Err: rootHash is wrong.");
+       }
    
         bytes32 outputHash = keccak256(abi.encodePacked(_rootHash, _verifyRes, _attester));
         Bytes32sUtils.Bytes32List storage outputIds = round.outputIds;

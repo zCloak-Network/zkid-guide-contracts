@@ -18,9 +18,9 @@ contract Properties {
     // address of reward pool
     // v0.1.0 - ReputationV1 
     bytes32 public constant CONTRACT_REWARD = "CONTRACT_REWARD";
-    
-    // address of whitelist which a registry book for workers
-    bytes32 public constant CONTRACT_WHITELIST = "CONTRACT_WHITELIST";
+    // address of verifier's aggregated result
+    // v0.1.1 - CRAggregator
+    bytes32 public constant CONTRACT_AGGREGATOR = "CONTRACT_AGGREGATOR";
     // address of contract which is in charge of the read access to user's onchain kyc
     // v0.1.0 - ReadAccessController
     bytes32 public constant CONTRACT_READ_GATEWAY = "CONTRACT_READ_GATEWAY"; 

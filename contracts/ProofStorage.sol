@@ -12,18 +12,20 @@ import "./interfaces/IRequest.sol";
 import "./utils/Bytes32sUtils.sol";
 import "./common/Properties.sol";
 import "./common/AuthControl.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 
-contract KiltProofsV1 is AuthControl, Properties {
+contract ProofStorage is Context, AuthControl, Properties {
     bytes32 public constant NULL = "";
 
 
     // registry where we query global settings
     IRegistry public registry;
 
-    mapping(address => bytes32) public addr2KiltAddr;
+    // kiltAccount => userAddress
+    // TODO: any need to remove?
     mapping(bytes32 => address) public kiltAddr2Addr;
 
-    // userAdd => requestHash => proofCid
+    // userAddr => requestHash => proofCid
     mapping(address => mapping(bytes32 => string)) public proofs;
 
     
@@ -53,15 +55,15 @@ contract KiltProofsV1 is AuthControl, Properties {
         bytes32 _rootHash,
         bool _expResult
     ) public {
-        // TODO: user <=> kiltAccount or user <=> rootHash?
-        require(addr2KiltAddr[msg.sender] == bytes32(0) && kiltAddr2Addr[_kiltAccount] == address(0), "Kilt Account Already bounded.");
+        // kilt acount can not be bound repeatedly
+        require(kiltAddr2Addr[_kiltAccount] == address(0), "Kilt Account Already bounded.");
         // query request status
         IRequest request = IRequest(registry.addressOf(Properties.CONTRACT_REQUEST));
         bytes32 requestHash = keccak256(abi.encodePacked(_cType, _fieldName, _programHash, _expResult, _attester));
         // request.getRequestHash(_cType, _fieldName, _programHash, _expResult, _attester);
 
-        require(!single_proof_exists(msg.sender, requestHash), "Your proof has already existed, do not add same proof again");
-        _addProof(msg.sender, _kiltAccount, _attester, _cType, _fieldName, _programHash, _proofCid, _rootHash, _expResult, requestHash, request);
+        require(!single_proof_exists(_msgSender(), requestHash), "Your proof has already existed, do not add same proof again");
+        _addProof(_msgSender(), _kiltAccount, _attester, _cType, _fieldName, _programHash, _proofCid, _rootHash, _expResult, requestHash, request);
     }
 
     // TODO: change the validity in aggregator contract if the proofcid has
@@ -78,11 +80,11 @@ contract KiltProofsV1 is AuthControl, Properties {
     ) public {
         IRequest request = IRequest(registry.addressOf(Properties.CONTRACT_REQUEST));
         bytes32 requestHash = keccak256(abi.encodePacked(_cType, _fieldName, _programHash, _expResult, _attester));
-        require(single_proof_exists(msg.sender, requestHash), "Your haven't add your proof before, please add it first");
+        require(single_proof_exists(_msgSender(), requestHash), "Your haven't add your proof before, please add it first");
         address boundedAddr = kiltAddr2Addr[_kiltAccount];
         // the maybe new KiltAccount can not be bounded to other address
-        require(boundedAddr == msg.sender || boundedAddr == address(0), "Kilt Address already Bounded");
-        _addProof(msg.sender, _kiltAccount, _attester, _cType, _fieldName, _programHash, _proofCid, _rootHash, _expResult, requestHash, request);
+        require(boundedAddr == _msgSender() || boundedAddr == address(0), "Kilt Address already Bounded");
+        _addProof(_msgSender(), _kiltAccount, _attester, _cType, _fieldName, _programHash, _proofCid, _rootHash, _expResult, requestHash, request);
     }
 
 
@@ -105,7 +107,6 @@ contract KiltProofsV1 is AuthControl, Properties {
         }
 
         // bind to kilt account
-        addr2KiltAddr[_user] = _kiltAccount;
         kiltAddr2Addr[_kiltAccount] =_user;
 
         emit AddProof(_user, _kiltAccount, _attester, _cType, _programHash, _fieldName, _proofCid, _rootHash, _expResult);
