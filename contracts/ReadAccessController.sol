@@ -49,14 +49,11 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IRequest, IE
     event AddRule(address project, bytes32 requestHash, address token, uint256 perVisitFee);
     event DeleteRule(address project, bytes32 requestHash);
 
-
     constructor(
-        address _registry,
-        address _aggregator
+        address _registry
     ) {
         registry = IRegistry(_registry);
     }
-
 
 
     // TODO: revoked by owner and KiltProofV1
