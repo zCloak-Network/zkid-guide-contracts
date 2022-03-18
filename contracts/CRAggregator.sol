@@ -99,7 +99,7 @@ contract CRAggregator is Properties, AuthControl, IChecker {
 
     constructor(
         address _registry
-    ) public {
+    ) {
         registry = IRegistry(_registry);
     }
 

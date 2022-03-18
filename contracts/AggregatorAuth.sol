@@ -27,6 +27,7 @@ contract AggregatorAuth is Ownable, IAuthority, Properties {
         registry = IRegistry(_registry);
         for (uint i = 0; i < _whitelist.length; i++) {
             isWorker[_whitelist[i]] = true;
+            workerCount++;
             emit AddWorker(_whitelist[i]);
         }
     }
