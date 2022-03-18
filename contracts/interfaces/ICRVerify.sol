@@ -17,4 +17,6 @@ interface ICRVerify {
         bytes32 attester
     ) external;
 
+    function getOutputHash(bytes32 _rootHash, bool _isPassed, bytes32 _attester) external view returns (bytes32);
+
 }

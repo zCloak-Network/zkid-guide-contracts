@@ -6,6 +6,7 @@ import "./common/AuthControl.sol";
 import "./interfaces/IRegistry.sol";
 import "./interfaces/IChecker.sol";
 import "./interfaces/IReputation.sol";
+import "./interfaces/ICRVerify.sol";
 import "./interfaces/IRequest.sol";
 import "./utils/AddressesUtils.sol";
 import "./utils/Bytes32sUtils.sol";
@@ -16,7 +17,7 @@ import "./utils/Bytes32sUtils.sol";
  * @notice each node worker will commit the hash first and 
  * then reveal the answer later.
  */
-contract CRAggregator is Properties, AuthControl, IChecker {
+contract CRAggregator is Properties, AuthControl, IChecker, ICRVerify {
 
     using AddressesUtils for AddressesUtils.Addresses;
     using Bytes32sUtils for Bytes32sUtils.Bytes32List;
@@ -62,16 +63,6 @@ contract CRAggregator is Properties, AuthControl, IChecker {
         uint32 threshold;
     }
 
-    struct VerifyRecord {
-        // use this to record the # of success txs the worker
-        // has submitted.
-        // we use the hash(address+nonce) as the salt value 
-        // in the commit stage, to avoid the freeloading attack.
-        uint256 nonce;
-        // user => requestHash => commitHash
-        mapping(address => mapping(bytes32 => bytes32)) submits;
-    }
-    
     // registry where we query global settings
     IRegistry public registry;
 
@@ -81,19 +72,16 @@ contract CRAggregator is Properties, AuthControl, IChecker {
     // user => requestHash => Final
     mapping(address => mapping(bytes32 => Final)) zkCredential;
 
-    // user => requestHash => rootHash
-    mapping(address => mapping(bytes32 => bytes32)) public addr2Root;
-
     // rootHash => user
     mapping(bytes32 => address) did;
 
-    // worker => VerifyRecord
-    mapping(address => VerifyRecord) workerActivities;
+    // worker => cOwner => requestHash => isSubmittedReveal
+    mapping(address => mapping(address => mapping(bytes32 => bool))) revealSubmissions;
 
     event Commit(address cOwner, bytes32 requestHash, address worker, bytes32 commitHash);
     event CommitEnd(address cOwner, bytes32 requestHash);
 
-    event Reveal(address cOwner, bytes32 requestHash, address worker, bytes32 attester, bool isPassed);
+    event Verifying(address cOwner, bytes32 requestHash, address worker, bytes32 attester, bool isPassed);
     event Canonical(address cOwner, bytes32 requestHash, bool isPassed);
 
 
@@ -109,7 +97,7 @@ contract CRAggregator is Properties, AuthControl, IChecker {
         address _cOwner,
         bytes32 _requestHash,
         bytes32 _commitHash
-    ) auth() public {
+    ) auth() override public {
         RoundDetails storage round = rounds[_cOwner][_requestHash];
         require(round.stage == Stage.Created || round.stage == Stage.Commit, "commits are now not accepted.");
         
@@ -132,9 +120,6 @@ contract CRAggregator is Properties, AuthControl, IChecker {
         // enable worker to change its commit in Commit stage
         round.commits[msg.sender] = _commitHash;
         round.submissions[Stage.Commit] += 1;
-        // increase nonce
-        VerifyRecord storage record = workerActivities[msg.sender];
-        record.submits[_cOwner][_requestHash] = _commitHash;
 
         emit Commit(_cOwner, _requestHash, msg.sender, _commitHash);
 
@@ -155,18 +140,16 @@ contract CRAggregator is Properties, AuthControl, IChecker {
         bytes32 _rootHash,
         bool _verifyRes,
         bytes32 _attester
-    ) auth() public {
+    ) auth() override public {
         RoundDetails storage round = rounds[_cOwner][_requestHash];
         require(round.stage == Stage.Reveal, "Err: Must be in reveal stage");
         IReputation reputation = IReputation(registry.addressOf(Properties.CONTRACT_REPUTATION));
         // the worker can and only can submit only once
-        VerifyRecord storage record = workerActivities[msg.sender];
-        require(record.submits[_cOwner][_requestHash] != 0, "Err: Can not submit twice the same task");
+        require(!revealSubmissions[msg.sender][_cOwner][_requestHash], "Err: Can not submit twice the same task");
         // check commit hash
         // commitHash = hash(rootHash + isPassed + attesterAccount + workerAddress)
         bytes32 hash = keccak256(abi.encodePacked(_rootHash, _verifyRes, _attester, msg.sender));
 
-             
         if (hash != round.commits[msg.sender]) {
             reputation.punish(_requestHash, msg.sender);
             return;
@@ -180,7 +163,7 @@ contract CRAggregator is Properties, AuthControl, IChecker {
             require((_cType == cType) && (_attester == attester), "Err: rootHash is wrong.");
        }
    
-        bytes32 outputHash = keccak256(abi.encodePacked(_rootHash, _verifyRes, _attester));
+        bytes32 outputHash = getOutputHash(_rootHash, _verifyRes, _attester);
         Bytes32sUtils.Bytes32List storage outputIds = round.outputIds;
         // initialize output id, it's only initlaized once
         if (round.outputId[outputHash].rootHash == bytes32(0)) {
@@ -199,13 +182,17 @@ contract CRAggregator is Properties, AuthControl, IChecker {
 
         // reward before reveal finished
         reputation.reward(_requestHash, msg.sender);
+        // add reveal count
+        round.submissions[Stage.Reveal] += 1;
+        // add keeper reaveal submission record
+        revealSubmissions[msg.sender][_cOwner][_requestHash] = true;
 
         uint32 threshold = round.threshold;
         if (vote.voteCount >= threshold) {
             _agree(_requestHash, _cOwner, _verifyRes, _rootHash, reputation, outputHash, round);
         }
 
-        emit Reveal(_cOwner, _requestHash, msg.sender, _attester, _verifyRes);
+        emit Verifying(_cOwner, _requestHash, msg.sender, _attester, _verifyRes);
     }
 
     // reach the final result
@@ -216,8 +203,6 @@ contract CRAggregator is Properties, AuthControl, IChecker {
         // TODO: how to manage kyc info updates?
         {
             require(did[_rootHash] == address(0) || did[_rootHash] == _cOwner, "Err: rootHash already claimed");
-
-            addr2Root[_cOwner][_requestHash] = _rootHash;
             did[_rootHash] = _cOwner;
         }
 
@@ -239,6 +224,10 @@ contract CRAggregator is Properties, AuthControl, IChecker {
 
     function isValid(address _who, bytes32 _requestHash) override external view returns (bool) {
         return zkCredential[_who][_requestHash].isPassed;
+    }
+
+    function getOutputHash(bytes32 _rootHash, bool _isPassed, bytes32 _attester) override public pure returns (bytes32 oHash) {
+        oHash = keccak256(abi.encodePacked(_rootHash, _isPassed, _attester));
     }
 
 
