@@ -25,8 +25,6 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IRequest, IE
     using AddressesUtils for AddressesUtils.Addresses;
 
     IRegistry public registry;
-    IChecker public aggregator;
-
 
     struct RequestDetail {
         bytes32 cType;
@@ -57,7 +55,6 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IRequest, IE
         address _aggregator
     ) {
         registry = IRegistry(_registry);
-        aggregator = IChecker(_aggregator);
     }
 
 
@@ -119,7 +116,13 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IRequest, IE
     
     // read data from aggregator
     function isValid(address _who, bytes32 _requestHash) accessAllowed(msg.sender, _requestHash) override external view returns (bool) {
+        IChecker aggregator = IChecker(registry.addressOf(Properties.CONTRACT_AGGREGATOR));
         return aggregator.isValid(_who, _requestHash);
+    }
+
+    function requestMetadata(bytes32 _requestHash) override public view returns (bytes32 cType, bytes32 attester) {
+        RequestDetail storage request = requestInfo[_requestHash];
+        return (request.cType, request.attester);
     }
 
     // project will use `transferFromAndCall(user, rac, amount, data)` or `transferAndCall(rac, amount, data)`
@@ -135,11 +138,13 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IRequest, IE
         // 1. where to get the user address 
         //  `_sender` or retrieve it from `data`
         // 2. specify the revoked function in data or 'hardcode' it?
+        address cOwner;
         bytes32 requestHash;
         assembly {
             let ptr := mload(0x40)
             calldatacopy(ptr, 0, calldatasize())
-            requestHash := mload(add(ptr, 0x100))
+            cOwner := mload(add(ptr, 0x100))
+            requestHash := mload(add(ptr,0x120))
         }
 
         Meter storage meter = applied[requestHash][_operator];
@@ -153,7 +158,7 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IRequest, IE
         // _data must be requestHash
         require(IERC1363(tokenExp).transferAndCall(rewardPool, _amount, _data));
 
-        bool res = this.isValid(_sender, requestHash);
+        bool res = this.isValid(cOwner, requestHash);
         // charge if the user is verified true
         if (res) {
             return IERC1363Receiver(this).onTransferReceived.selector;

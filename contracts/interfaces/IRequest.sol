@@ -21,4 +21,7 @@ interface IRequest {
         bool expResult,
         bytes32 attester
     ) external returns (bytes32);
+
+    // return (cType, expResult, attester)
+    function requestMetadata(bytes32 _requestHash) external view returns (bytes32, bytes32);
 }
