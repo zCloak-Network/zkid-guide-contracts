@@ -9,7 +9,7 @@ import "./interfaces/IERC1363.sol";
 import "./interfaces/IERC1363Receiver.sol";
 import "./interfaces/IRequest.sol";
 import "./utils/AddressesUtils.sol";
-
+import "@openzeppelin/contracts/utils/Context.sol";
 
 /**
  * @title ReadAccessController serves as:
@@ -20,8 +20,14 @@ import "./utils/AddressesUtils.sol";
  * @notice worker can submitCommit and submitReveal
     and ReadAccessController can read isValid
  */
-contract ReadAccessController is Properties, AuthControl, IChecker, IRequest, IERC1363Receiver {
-
+contract ReadAccessController is
+    Context,
+    Properties,
+    AuthControl,
+    IChecker,
+    IRequest,
+    IERC1363Receiver
+{
     using AddressesUtils for AddressesUtils.Addresses;
 
     IRegistry public registry;
@@ -36,7 +42,7 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IRequest, IE
 
     struct Meter {
         uint256 perVisitFee;
-        // using native token like ETH if token is address(0) 
+        // using native token like ETH if token is address(0)
         // do not use this to determine the access
         address token;
     }
@@ -46,15 +52,17 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IRequest, IE
     // requestHash => project => meter
     mapping(bytes32 => mapping(address => Meter)) public applied;
 
-    event AddRule(address project, bytes32 requestHash, address token, uint256 perVisitFee);
+    event AddRule(
+        address project,
+        bytes32 requestHash,
+        address token,
+        uint256 perVisitFee
+    );
     event DeleteRule(address project, bytes32 requestHash);
 
-    constructor(
-        address _registry
-    ) {
+    constructor(address _registry) {
         registry = IRegistry(_registry);
     }
-
 
     // TODO: revoked by owner and KiltProofV1
     function initializeRequest(
@@ -63,11 +71,19 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IRequest, IE
         bytes32 _programHash,
         bool _expResult,
         bytes32 _attester
-    ) auth() override external {
-
-        bytes32 requestHash = getRequestHash(_cType, _fieldName, _programHash, _expResult, _attester);
+    ) external override auth {
+        bytes32 requestHash = getRequestHash(
+            _cType,
+            _fieldName,
+            _programHash,
+            _expResult,
+            _attester
+        );
         // must be the first time to add info
-        require(requestInfo[requestHash].cType == bytes32(0), "Already Initlaized");
+        require(
+            requestInfo[requestHash].cType == bytes32(0),
+            "Already Initlaized"
+        );
 
         // start to initlaize
         // modify request
@@ -80,14 +96,17 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IRequest, IE
         // TODO: add event
     }
 
-
-    function applyRequest(bytes32 _requestHash, address _project, address _token, uint256 _perVisitFee) onlyOwner() public {
+    function applyRequest(
+        bytes32 _requestHash,
+        address _project,
+        address _token,
+        uint256 _perVisitFee
+    ) public onlyOwner {
         Meter storage meter = applied[_requestHash][_project];
         meter.token = _token;
         meter.perVisitFee = _perVisitFee;
         // TODO: add event
     }
-
 
     function getRequestHash(
         bytes32 _cType,
@@ -95,44 +114,71 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IRequest, IE
         bytes32 _programHash,
         bool _expResult,
         bytes32 _attester
-    ) override public pure returns (bytes32 rHash) {
-        rHash = keccak256(abi.encodePacked(_cType, _fieldName, _programHash, _expResult, _attester));
+    ) public pure override returns (bytes32 rHash) {
+        rHash = keccak256(
+            abi.encodePacked(
+                _cType,
+                _fieldName,
+                _programHash,
+                _expResult,
+                _attester
+            )
+        );
     }
 
     // To check if a requestHash has been initlized
-    function exists(bytes32 _requestHash) override external view returns (bool) {
+    function exists(bytes32 _requestHash)
+        external
+        view
+        override
+        returns (bool)
+    {
         return requestInfo[_requestHash].cType != bytes32(0);
     }
 
-
     modifier accessAllowed(address _caller, bytes32 _requestHash) {
-         require(applied[_requestHash][_caller].perVisitFee != 0 || _caller == address(this), "No Access");
-         _;
-    } 
+        require(
+            applied[_requestHash][_caller].perVisitFee != 0 ||
+                _caller == address(this),
+            "No Access"
+        );
+        _;
+    }
 
-    
     // read data from aggregator
-    function isValid(address _who, bytes32 _requestHash) accessAllowed(msg.sender, _requestHash) override external view returns (bool) {
-        IChecker aggregator = IChecker(registry.addressOf(Properties.CONTRACT_AGGREGATOR));
+    function isValid(address _who, bytes32 _requestHash)
+        external
+        view
+        override
+        accessAllowed(_msgSender(), _requestHash)
+        returns (bool)
+    {
+        IChecker aggregator = IChecker(
+            registry.addressOf(Properties.CONTRACT_AGGREGATOR)
+        );
         return aggregator.isValid(_who, _requestHash);
     }
 
-    function requestMetadata(bytes32 _requestHash) override public view returns (bytes32 cType, bytes32 attester) {
+    function requestMetadata(bytes32 _requestHash)
+        public
+        view
+        override
+        returns (bytes32 cType, bytes32 attester)
+    {
         RequestDetail storage request = requestInfo[_requestHash];
         return (request.cType, request.attester);
     }
 
     // project will use `transferFromAndCall(user, rac, amount, data)` or `transferAndCall(rac, amount, data)`
-    // msg.sender should be token
+    // _msgSender() should be token
     function onTransferReceived(
         address _operator, // project
         address _sender, // user/project
         uint256 _amount,
         bytes calldata _data
-    ) override external returns (bytes4) {
- 
+    ) external override returns (bytes4) {
         // TODO: deserialize data?
-        // 1. where to get the user address 
+        // 1. where to get the user address
         //  `_sender` or retrieve it from `data`
         // 2. specify the revoked function in data or 'hardcode' it?
         address cOwner;
@@ -141,14 +187,17 @@ contract ReadAccessController is Properties, AuthControl, IChecker, IRequest, IE
             let ptr := mload(0x40)
             calldatacopy(ptr, 0, calldatasize())
             cOwner := mload(add(ptr, 0x100))
-            requestHash := mload(add(ptr,0x120))
+            requestHash := mload(add(ptr, 0x120))
         }
 
         Meter storage meter = applied[requestHash][_operator];
         address tokenExp = meter.token;
         uint256 perVisit = meter.perVisitFee;
-    
-        require(tokenExp == msg.sender || _amount >= perVisit, "Wrong Payment");
+
+        require(
+            tokenExp == _msgSender() || _amount >= perVisit,
+            "Wrong Payment"
+        );
 
         // transfer reward token to reward pool
         address rewardPool = registry.addressOf(Properties.CONTRACT_REWARD);

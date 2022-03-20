@@ -4,8 +4,15 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Registry is Ownable {
-
-    enum SettingsValueTypes { NONE, UINT, STRING, ADDRESS, BYTES, BOOL, INT }
+    enum SettingsValueTypes {
+        NONE,
+        UINT,
+        STRING,
+        ADDRESS,
+        BYTES,
+        BOOL,
+        INT
+    }
 
     mapping(bytes32 => uint256) public uintProperties;
     mapping(bytes32 => uint32) public uint32Properties;
@@ -25,7 +32,11 @@ contract Registry is Ownable {
         return uint32Properties[_propertyName];
     }
 
-    function stringOf(bytes32 _propertyName) public view returns (string memory) {
+    function stringOf(bytes32 _propertyName)
+        public
+        view
+        returns (string memory)
+    {
         return stringProperties[_propertyName];
     }
 
@@ -41,36 +52,54 @@ contract Registry is Ownable {
         return boolProperties[_propertyName];
     }
 
-    function intOf(bytes32 _propertyName) public view returns (int) {
+    function intOf(bytes32 _propertyName) public view returns (int256) {
         return intProperties[_propertyName];
     }
 
-    function setUintProperty(bytes32 _propertyName, uint _value) public onlyOwner {
+    function setUintProperty(bytes32 _propertyName, uint256 _value)
+        public
+        onlyOwner
+    {
         uintProperties[_propertyName] = _value;
         emit ChangeProperty(_propertyName, uint256(SettingsValueTypes.UINT));
     }
 
-    function setStringProperty(bytes32 _propertyName, string memory _value) public onlyOwner {
+    function setStringProperty(bytes32 _propertyName, string memory _value)
+        public
+        onlyOwner
+    {
         stringProperties[_propertyName] = _value;
         emit ChangeProperty(_propertyName, uint256(SettingsValueTypes.STRING));
     }
 
-    function setAddressProperty(bytes32 _propertyName, address _value) public onlyOwner {
+    function setAddressProperty(bytes32 _propertyName, address _value)
+        public
+        onlyOwner
+    {
         addressProperties[_propertyName] = _value;
         emit ChangeProperty(_propertyName, uint256(SettingsValueTypes.ADDRESS));
     }
 
-    function setBytesProperty(bytes32 _propertyName, bytes memory _value) public onlyOwner {
+    function setBytesProperty(bytes32 _propertyName, bytes memory _value)
+        public
+        onlyOwner
+    {
         bytesProperties[_propertyName] = _value;
         emit ChangeProperty(_propertyName, uint256(SettingsValueTypes.BYTES));
     }
 
-    function setBoolProperty(bytes32 _propertyName, bool _value) public onlyOwner {
+    function setBoolProperty(bytes32 _propertyName, bool _value)
+        public
+        onlyOwner
+    {
         boolProperties[_propertyName] = _value;
         emit ChangeProperty(_propertyName, uint256(SettingsValueTypes.BOOL));
     }
 
-    function setIntProperty(bytes32 _propertyName, int _value) public onlyOwner {
+    function setIntProperty(bytes32 _propertyName, int256 _value)
+        public
+        onlyOwner
+    {
         intProperties[_propertyName] = _value;
         emit ChangeProperty(_propertyName, uint256(SettingsValueTypes.INT));
     }

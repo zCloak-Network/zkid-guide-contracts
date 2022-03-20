@@ -12,9 +12,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * @notice worker can submitCommit and submitReveal
  *  and ReadAccessController can read isValid
  */
- //TODO: logic needs update.
+//TODO: logic needs update.
 contract AggregatorAuth is Ownable, IAuthority, Properties {
-
     IRegistry registry;
 
     event AddWorker(address worker);
@@ -25,15 +24,15 @@ contract AggregatorAuth is Ownable, IAuthority, Properties {
 
     // worker can invoke addVerification
     // Oracle can read through isPassed and isValid
-     function canCall(
-        address _src, address _dst, bytes4 _sig
-    ) override public view returns (bool) {
+    function canCall(
+        address _src,
+        address _dst,
+        bytes4 _sig
+    ) public view override returns (bool) {
         address aggregator = registry.addressOf(Properties.CONTRACT_AGGREGATOR);
-        return (_src == aggregator) && (
-            ( _sig == IReputation.reward.selector) || 
-            ( _sig == IReputation.punish.selector)
-        );
-        
+        return
+            (_src == aggregator) &&
+            ((_sig == IReputation.reward.selector) ||
+                (_sig == IReputation.punish.selector));
     }
-
 }

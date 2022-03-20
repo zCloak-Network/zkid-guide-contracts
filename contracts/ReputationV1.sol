@@ -9,13 +9,13 @@ import "./interfaces/IReputation.sol";
 import "./common/AuthControl.sol";
 import "./common/Properties.sol";
 import "./utils/AddressesUtils.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 
 /**
  * @title record the reputation point for worker and reward pool
  */
- 
-contract Reputation is IERC1363Receiver, IReputation, AuthControl, Properties {
 
+contract Reputation is Context, IERC1363Receiver, IReputation, AuthControl, Properties {
     int128 constant PUNISH = -2;
     int128 constant REWARD = 1;
 
@@ -30,13 +30,12 @@ contract Reputation is IERC1363Receiver, IReputation, AuthControl, Properties {
 
     IRegistry registry;
 
-
     // requestHash => token => totalReward
-    mapping(bytes32 => mapping(address => uint256)) rewardPool; 
+    mapping(bytes32 => mapping(address => uint256)) rewardPool;
 
     // requstHash => token list
     mapping(bytes32 => AddressesUtils.Addresses) payments;
-   
+
     // requestHash => totalPoint
     // totalPoint could not be negative
     mapping(bytes32 => uint256) totalPoints;
@@ -59,117 +58,161 @@ contract Reputation is IERC1363Receiver, IReputation, AuthControl, Properties {
     event BatchClaim(bytes32 requestHash, address claimer);
     // emit when worker submit the wrong result
     // Punish(requestHash, worker, individualPoints, communityPoints, totalPoints)
-    event Punish(bytes32 requestHash, address worker, int128 individualPoints, int128 communityPoints, int128 totalPoints);
+    event Punish(
+        bytes32 requestHash,
+        address worker,
+        int128 individualPoints,
+        int128 communityPoints,
+        int128 totalPoints
+    );
     // emit when worker submit the wrong result
     // Reward(requestHash, worker, individualPoints, communityPoints, totalPoints)
-    event Reward(bytes32 requestHash, address worker, int128 individualPoints, int128 communityPoints, int128 totalPoints);
-    
+    event Reward(
+        bytes32 requestHash,
+        address worker,
+        int128 individualPoints,
+        int128 communityPoints,
+        int128 totalPoints
+    );
 
     constructor(address _registry) {
         registry = IRegistry(_registry);
     }
-    
+
     // batch claim the multiple-token verification reward
     function batchClaim(bytes32 _requestHash) public {
         AddressesUtils.Addresses storage tokens = payments[_requestHash];
-        for( uint i = 0; i < tokens.length(); i++) {
-            address token = tokens.addresses[i];
-            IndividualReputation storage individualR = individuals[_requestHash][msg.sender];
-            uint withdraw = _withdrawable(individualR, _requestHash, token);
+        for (uint256 i = 0; i < tokens.length(); i++) {
+            address token = tokens.element(i);
+            IndividualReputation storage individualR = individuals[
+                _requestHash
+            ][_msgSender()];
+            uint256 withdraw = _withdrawable(individualR, _requestHash, token);
 
             // should check all reward status
             if (withdraw == 0) {
                 continue;
             }
 
-            _claim(token, msg.sender, withdraw, individualR);
+            _claim(token, _msgSender(), withdraw, individualR);
         }
 
-        emit BatchClaim(_requestHash, msg.sender);
+        emit BatchClaim(_requestHash, _msgSender());
     }
 
-    
     // claim the verification reward of the specific token
-    function claimToken(bytes32 _requestHash, address _token) public returns (bool) {
-        IndividualReputation storage individualR = individuals[_requestHash][msg.sender];
-        uint withdraw = _withdrawable(individualR, _requestHash, _token);
+    function claimToken(bytes32 _requestHash, address _token)
+        public
+        returns (bool)
+    {
+        IndividualReputation storage individualR = individuals[_requestHash][
+            _msgSender()
+        ];
+        uint256 withdraw = _withdrawable(individualR, _requestHash, _token);
         if (withdraw == 0) {
             // nothing to claim
             return false;
         }
 
-        return _claim(_token, msg.sender, withdraw, individualR);
-       
+        return _claim(_token, _msgSender(), withdraw, individualR);
     }
 
-    function _claim(address _token, address _claimer, uint256 _withdraw, IndividualReputation storage _individualR) internal returns (bool) {
+    function _claim(
+        address _token,
+        address _claimer,
+        uint256 _withdraw,
+        IndividualReputation storage _individualR
+    ) internal returns (bool) {
         _individualR.claimedAmount[_token].add(_withdraw);
         IERC1363(_token).transfer(_claimer, _withdraw);
-        
+
         emit Claim(_token, _withdraw, _claimer);
 
         return true;
     }
 
-
-    function withdrawable(bytes32 _requestHash, address _token, address _worker) public view returns (uint256) {
-        IndividualReputation storage individualR = individuals[_requestHash][_worker];
+    function withdrawable(
+        bytes32 _requestHash,
+        address _token,
+        address _worker
+    ) public view returns (uint256) {
+        IndividualReputation storage individualR = individuals[_requestHash][
+            _worker
+        ];
 
         return _withdrawable(individualR, _requestHash, _token);
     }
 
-
-
     // TODO: extract common part of punish and reward
-    function punish(bytes32 _requestHash, address _worker) auth() override public {
+    function punish(bytes32 _requestHash, address _worker)
+        public
+        override
+        auth
+    {
         AddressesUtils.Addresses storage tokens = payments[_requestHash];
-        IndividualReputation storage individualR = individuals[_requestHash][_worker];
+        IndividualReputation storage individualR = individuals[_requestHash][
+            _worker
+        ];
         // this requestHash is not rewarded by any project
         if (tokens.length() == 0) {
             communityReputations[_requestHash][_worker] += PUNISH;
         } else {
-        // rewarded by projects
+            // rewarded by projects
             individualR.individualReputation += PUNISH;
         }
-        
+
         reputations[_worker] += PUNISH;
 
-        emit Punish(_requestHash, _worker, individualR.individualReputation, communityReputations[_requestHash][_worker], reputations[_worker]);
+        emit Punish(
+            _requestHash,
+            _worker,
+            individualR.individualReputation,
+            communityReputations[_requestHash][_worker],
+            reputations[_worker]
+        );
     }
 
-
-    function reward(bytes32 _requestHash, address _worker) auth() override public {
-
+    function reward(bytes32 _requestHash, address _worker)
+        public
+        override
+        auth
+    {
         AddressesUtils.Addresses storage tokens = payments[_requestHash];
-        IndividualReputation storage individualR = individuals[_requestHash][_worker];
+        IndividualReputation storage individualR = individuals[_requestHash][
+            _worker
+        ];
         // this requestHash is not rewarded by any project
-        if (tokens.length() == 0 ) {
+        if (tokens.length() == 0) {
             communityReputations[_requestHash][_worker] += REWARD;
         } else {
-        // rewarded by projects
+            // rewarded by projects
             individualR.individualReputation += REWARD;
         }
         // update total reputation
         reputations[_worker] += REWARD;
 
-        emit Reward(_requestHash, _worker, individualR.individualReputation, communityReputations[_requestHash][_worker], reputations [_worker]);
+        emit Reward(
+            _requestHash,
+            _worker,
+            individualR.individualReputation,
+            communityReputations[_requestHash][_worker],
+            reputations[_worker]
+        );
     }
-
 
     function transformReputation(bytes32 _requestHash) public {
         AddressesUtils.Addresses storage tokens = payments[_requestHash];
 
         if (tokens.length() > 0) {
-            int128 communtiyR = communityReputations[_requestHash][msg.sender];
-            individuals[_requestHash][msg.sender].individualReputation += communtiyR;
-            communityReputations[_requestHash][msg.sender] = 0;
+            int128 communtiyR = communityReputations[_requestHash][_msgSender()];
+            individuals[_requestHash][_msgSender()]
+                .individualReputation += communtiyR;
+            communityReputations[_requestHash][_msgSender()] = 0;
         }
         // TODO: add event
     }
 
-
-
-    // TODO: add any access control to limit the caller 
+    // TODO: add any access control to limit the caller
     // to ReadAccessController contract instance?
     // modify clients
     function onTransferReceived(
@@ -177,9 +220,10 @@ contract Reputation is IERC1363Receiver, IReputation, AuthControl, Properties {
         address _sender, // rac
         uint256 _amount,
         bytes calldata data // requstHash
-    ) override external returns (bytes4) {
-
-        address readGateway = registry.addressOf(Properties.CONTRACT_READ_GATEWAY);
+    ) external override returns (bytes4) {
+        address readGateway = registry.addressOf(
+            Properties.CONTRACT_READ_GATEWAY
+        );
         if (_operator != readGateway) {
             // wrong sender
             return bytes4(0);
@@ -192,40 +236,41 @@ contract Reputation is IERC1363Receiver, IReputation, AuthControl, Properties {
             requestHash := mload(add(ptr, 0x100))
         }
 
-        rewardPool[requestHash][msg.sender].tryAdd(_amount);
+        rewardPool[requestHash][_msgSender()].tryAdd(_amount);
         // TODO: add event
-
     }
 
-
     // compute the amount of reward that a worker can withdraw
-    function _withdrawable(IndividualReputation storage _individualR, bytes32 _requestHash, address _token) internal view returns (uint256) {
-        // can not claim reward if reputation is negative 
-        int keeperReputation = _individualR.individualReputation;
+    function _withdrawable(
+        IndividualReputation storage _individualR,
+        bytes32 _requestHash,
+        address _token
+    ) internal view returns (uint256) {
+        // can not claim reward if reputation is negative
+        int256 keeperReputation = _individualR.individualReputation;
         if (keeperReputation <= 0) {
             return 0;
         }
-        
-        uint256 rewardPerPoint = rewardPool[_requestHash][_token] / totalPoints[_requestHash];
+
+        uint256 rewardPerPoint = rewardPool[_requestHash][_token] /
+            totalPoints[_requestHash];
         // rewardPerPoint * reputation
         uint256 totalToWithdraw = rewardPerPoint * uint256(keeperReputation);
 
-        (bool _isLegal, uint withdrawableAmount) = totalToWithdraw.trySub(_individualR.claimedAmount[_token]);
+        (bool _isLegal, uint256 withdrawableAmount) = totalToWithdraw.trySub(
+            _individualR.claimedAmount[_token]
+        );
 
-        uint maxAmount = rewardPool[_requestHash][_token];
-       
-        // can not exceed amount of tken in the reward pool 
-        uint withdraw;
+        uint256 maxAmount = rewardPool[_requestHash][_token];
+
+        // can not exceed amount of tken in the reward pool
+        uint256 withdraw;
         if (withdrawableAmount <= maxAmount) {
             withdraw = withdrawableAmount;
         } else {
             withdraw = maxAmount;
         }
 
-        return withdraw ;
+        return withdraw;
     }
-
-
-
-
 }

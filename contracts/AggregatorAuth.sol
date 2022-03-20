@@ -15,7 +15,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 
 contract AggregatorAuth is Ownable, IAuthority, Properties {
-
     uint256 workerCount;
 
     IRegistry registry;
@@ -25,7 +24,7 @@ contract AggregatorAuth is Ownable, IAuthority, Properties {
 
     constructor(address[] memory _whitelist, address _registry) {
         registry = IRegistry(_registry);
-        for (uint i = 0; i < _whitelist.length; i++) {
+        for (uint256 i = 0; i < _whitelist.length; i++) {
             isWorker[_whitelist[i]] = true;
             workerCount++;
             emit AddWorker(_whitelist[i]);
@@ -35,23 +34,26 @@ contract AggregatorAuth is Ownable, IAuthority, Properties {
     function addWorker(address _worker) public onlyOwner {
         isWorker[_worker] = true;
         workerCount++;
-  
+
         emit AddWorker(_worker);
     }
 
     // worker can invoke addVerification
     // Oracle can read through isPassed and isValid
-     function canCall(
-        address _src, address _dst, bytes4 _sig
-    ) override public view returns (bool) {
+    function canCall(
+        address _src,
+        address _dst,
+        bytes4 _sig
+    ) public view override returns (bool) {
         if (isWorker[_src]) {
-            return (_sig == ICRVerify.submitCommit.selector) ||
+            return
+                (_sig == ICRVerify.submitCommit.selector) ||
                 (_sig == ICRVerify.submitReveal.selector);
         }
 
-        address readGateway = registry.addressOf(Properties.CONTRACT_READ_GATEWAY);
-        return (_src == readGateway) && ( _sig == IChecker.isValid.selector);
-        
+        address readGateway = registry.addressOf(
+            Properties.CONTRACT_READ_GATEWAY
+        );
+        return (_src == readGateway) && (_sig == IChecker.isValid.selector);
     }
-
 }

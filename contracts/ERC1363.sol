@@ -20,8 +20,16 @@ abstract contract ERC1363 is ERC20, IERC1363, ERC165 {
     /**
      * @dev See {IERC165-supportsInterface}.
      */
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
-        return interfaceId == type(IERC1363).interfaceId || super.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC165, IERC165)
+        returns (bool)
+    {
+        return
+            interfaceId == type(IERC1363).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 
     /**
@@ -30,7 +38,12 @@ abstract contract ERC1363 is ERC20, IERC1363, ERC165 {
      * @param amount The amount to be transferred.
      * @return A boolean that indicates if the operation was successful.
      */
-    function transferAndCall(address to, uint256 amount) public virtual override returns (bool) {
+    function transferAndCall(address to, uint256 amount)
+        public
+        virtual
+        override
+        returns (bool)
+    {
         return transferAndCall(to, amount, "");
     }
 
@@ -47,7 +60,10 @@ abstract contract ERC1363 is ERC20, IERC1363, ERC165 {
         bytes memory data
     ) public virtual override returns (bool) {
         transfer(to, amount);
-        require(_checkAndCallTransfer(_msgSender(), to, amount, data), "ERC1363: _checkAndCallTransfer reverts");
+        require(
+            _checkAndCallTransfer(_msgSender(), to, amount, data),
+            "ERC1363: _checkAndCallTransfer reverts"
+        );
         return true;
     }
 
@@ -81,7 +97,10 @@ abstract contract ERC1363 is ERC20, IERC1363, ERC165 {
         bytes memory data
     ) public virtual override returns (bool) {
         transferFrom(from, to, amount);
-        require(_checkAndCallTransfer(from, to, amount, data), "ERC1363: _checkAndCallTransfer reverts");
+        require(
+            _checkAndCallTransfer(from, to, amount, data),
+            "ERC1363: _checkAndCallTransfer reverts"
+        );
         return true;
     }
 
@@ -91,7 +110,12 @@ abstract contract ERC1363 is ERC20, IERC1363, ERC165 {
      * @param amount The amount allowed to be transferred
      * @return A boolean that indicates if the operation was successful.
      */
-    function approveAndCall(address spender, uint256 amount) public virtual override returns (bool) {
+    function approveAndCall(address spender, uint256 amount)
+        public
+        virtual
+        override
+        returns (bool)
+    {
         return approveAndCall(spender, amount, "");
     }
 
@@ -108,7 +132,10 @@ abstract contract ERC1363 is ERC20, IERC1363, ERC165 {
         bytes memory data
     ) public virtual override returns (bool) {
         approve(spender, amount);
-        require(_checkAndCallApprove(spender, amount, data), "ERC1363: _checkAndCallApprove reverts");
+        require(
+            _checkAndCallApprove(spender, amount, data),
+            "ERC1363: _checkAndCallApprove reverts"
+        );
         return true;
     }
 
@@ -127,10 +154,15 @@ abstract contract ERC1363 is ERC20, IERC1363, ERC165 {
         uint256 amount,
         bytes memory data
     ) internal virtual returns (bool) {
-
         if (recipient.isContract()) {
-            bytes4 retval = IERC1363Receiver(recipient).onTransferReceived(_msgSender(), sender, amount, data);
-            return (retval == IERC1363Receiver(recipient).onTransferReceived.selector);
+            bytes4 retval = IERC1363Receiver(recipient).onTransferReceived(
+                _msgSender(),
+                sender,
+                amount,
+                data
+            );
+            return (retval ==
+                IERC1363Receiver(recipient).onTransferReceived.selector);
         }
 
         return true;
@@ -149,10 +181,14 @@ abstract contract ERC1363 is ERC20, IERC1363, ERC165 {
         uint256 amount,
         bytes memory data
     ) internal virtual returns (bool) {
-
         if (spender.isContract()) {
-           bytes4 retval = IERC1363Spender(spender).onApprovalReceived(_msgSender(), amount, data);
-            return (retval == IERC1363Spender(spender).onApprovalReceived.selector);
+            bytes4 retval = IERC1363Spender(spender).onApprovalReceived(
+                _msgSender(),
+                amount,
+                data
+            );
+            return (retval ==
+                IERC1363Spender(spender).onApprovalReceived.selector);
         }
 
         return true;
