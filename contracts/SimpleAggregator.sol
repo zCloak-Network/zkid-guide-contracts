@@ -101,11 +101,11 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
 
         // modify vote
         Vote storage vote = votes[_cOwner][_requestHash][outputHash];
-        vote.keepers._addAddress(_msgSender());
+        vote.keepers._push(_msgSender());
         vote.voteCount += 1;
 
         // add outputHash
-        outputHashes[_cOwner][_requestHash]._addBytes32(outputHash);
+        outputHashes[_cOwner][_requestHash]._push(outputHash);
 
         // reward keeper
         IReputation reputation = IReputation(
@@ -168,7 +168,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
     }
 
     function isValid(address _who, bytes32 _requestHash)
-        external
+        public
         view
         override
         returns (bool)

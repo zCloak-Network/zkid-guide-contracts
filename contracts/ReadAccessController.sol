@@ -52,6 +52,9 @@ contract ReadAccessController is
     // requestHash => project => meter
     mapping(bytes32 => mapping(address => Meter)) public applied;
 
+    // zCloak whitelist project, usually opened for zCloak demo app
+    mapping(address => bool) public superior;
+
     event AddRule(
         address project,
         bytes32 requestHash,
@@ -71,7 +74,7 @@ contract ReadAccessController is
         bytes32 _programHash,
         bool _expResult,
         bytes32 _attester
-    ) external override auth {
+    ) auth external override {
         bytes32 requestHash = getRequestHash(
             _cType,
             _fieldName,
@@ -108,6 +111,10 @@ contract ReadAccessController is
         // TODO: add event
     }
 
+    function superAuth(address _internal, bool granted) onlyOwner public {
+        superior[_internal] = granted;
+    }
+
     function getRequestHash(
         bytes32 _cType,
         string calldata _fieldName,
@@ -139,7 +146,7 @@ contract ReadAccessController is
     modifier accessAllowed(address _caller, bytes32 _requestHash) {
         require(
             applied[_requestHash][_caller].perVisitFee != 0 ||
-                _caller == address(this),
+                superior[_caller] || _caller == address(this),
             "No Access"
         );
         _;

@@ -195,12 +195,12 @@ contract CRAggregator is Context, Properties, AuthControl, IChecker, ICRVerify {
             output.isPassed = _verifyRes;
             output.attester = _attester;
             // add new element
-            outputIds._addBytes32(outputHash);
+            outputIds._push(outputHash);
         }
 
         // update votes
         Vote storage vote = round.votes[outputHash];
-        vote.workers._addAddress(_msgSender());
+        vote.workers._push(_msgSender());
         vote.voteCount += 1;
 
         // reward before reveal finished

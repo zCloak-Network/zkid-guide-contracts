@@ -10,12 +10,13 @@ import "./common/AuthControl.sol";
 import "./common/Properties.sol";
 import "./utils/AddressesUtils.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /**
  * @title record the reputation point for worker and reward pool
  */
 
-contract Reputation is Context, IERC1363Receiver, IReputation, AuthControl, Properties {
+contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC1363Receiver, IReputation {
     int128 constant PUNISH = -2;
     int128 constant REWARD = 1;
 
@@ -122,7 +123,7 @@ contract Reputation is Context, IERC1363Receiver, IReputation, AuthControl, Prop
         address _claimer,
         uint256 _withdraw,
         IndividualReputation storage _individualR
-    ) internal returns (bool) {
+    ) nonReentrant internal returns (bool) {
         _individualR.claimedAmount[_token].add(_withdraw);
         IERC1363(_token).transfer(_claimer, _withdraw);
 
@@ -228,7 +229,7 @@ contract Reputation is Context, IERC1363Receiver, IReputation, AuthControl, Prop
             // wrong sender
             return bytes4(0);
         }
-
+        
         bytes32 requestHash;
         assembly {
             let ptr := mload(0x40)

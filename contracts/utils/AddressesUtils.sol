@@ -9,7 +9,7 @@ library AddressesUtils {
     }
 
     // do not revert the tx
-    function _addAddress(Addresses storage _addresses, address _addr) internal {
+    function _push(Addresses storage _addresses, address _addr) internal {
         if (exists(_addresses, _addr)) {
             return;
         }
@@ -19,7 +19,7 @@ library AddressesUtils {
     }
 
     // TODO: need test
-    function _deleteAddress(Addresses storage _addresses, address _addr)
+    function _delete(Addresses storage _addresses, address _addr)
         internal
     {
         if (!exists(_addresses, _addr)) {

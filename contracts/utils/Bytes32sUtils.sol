@@ -8,7 +8,7 @@ library Bytes32sUtils {
         mapping(bytes32 => uint256) index;
     }
 
-    function _addBytes32(Bytes32List storage _bytes32Array, bytes32 _bytes32)
+    function _push(Bytes32List storage _bytes32Array, bytes32 _bytes32)
         internal
         returns (bool)
     {
@@ -20,7 +20,7 @@ library Bytes32sUtils {
     }
 
     // TODO: need test
-    function _deleteAddress(Bytes32List storage _bytes32Array, bytes32 _bytes32)
+    function _delete(Bytes32List storage _bytes32Array, bytes32 _bytes32)
         internal
         returns (bool)
     {
