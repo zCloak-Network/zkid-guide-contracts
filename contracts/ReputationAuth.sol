@@ -13,7 +13,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  *  and ReadAccessController can read isValid
  */
 //TODO: logic needs update.
-contract AggregatorAuth is Ownable, IAuthority, Properties {
+contract ReputationAuth is Ownable, IAuthority, Properties {
     IRegistry registry;
 
     event AddWorker(address worker);
