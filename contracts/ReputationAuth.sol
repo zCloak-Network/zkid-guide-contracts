@@ -8,12 +8,11 @@ import "./interfaces/IReputation.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
- * @title Control the CRAggregator's function calls.
- * @notice worker can submitCommit and submitReveal
- *  and ReadAccessController can read isValid
+ * @title Control the SimpleAggregator's function calls.
+ * @notice ReputationV1 contract can reward and punish keeper
  */
 //TODO: logic needs update.
-contract ReputationAuth is Ownable, IAuthority, Properties {
+contract AggregatorAuth is Ownable, IAuthority, Properties {
     IRegistry registry;
 
     event AddWorker(address worker);

@@ -104,16 +104,33 @@ describe("ProofStorage contract", function () {
             expect(proofExist).to.equal(true);
         });
 
-        // TODO: consider fail conditions
         it("Should fail if user readd the same proof", async function () {
-            
+            // user1 add proof
+            await proof.connect(user1).addProof(
+                kiltAccount,
+                attester,
+                cType,
+                fieldName,
+                programHash,
+                proofCid,
+                rootHash,
+                expectResult
+            );
+
+            // proof should be added successfully
+            let rHash = await rac.getRequestHash(cType, fieldName, programHash, expectResult, attester);
+            let proofExist = await proof.connect(user1).single_proof_exists(user1.address, rHash);
+            expect(proofExist).to.equal(true);
+
+            // user1 add same proof again and revert the tx
+            await expect(proof.connect(user1).addProof(kiltAccount, attester, cType, fieldName, programHash, proofCid, rootHash, expectResult))
+                .to.be.revertedWith('Kilt Account Already bounded.');
+
         });
 
-        it("Should success if same user add an new proof with different cType or programHash", async function () {
-            
-        });
     });
 
+    // TODO: need test update_proof
     describe("User update proof", function () {
 
     });

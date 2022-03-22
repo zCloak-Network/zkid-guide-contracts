@@ -6,7 +6,7 @@ import "./interfaces/IRegistry.sol";
 import "./ReadAccessController.sol";
 import "./interfaces/IAuthority.sol";
 
-contract ProofStorageAuth is Properties, IAuthority {
+contract RACAuth is Properties, IAuthority {
     IRegistry public registry;
 
     constructor (address _registry) {
