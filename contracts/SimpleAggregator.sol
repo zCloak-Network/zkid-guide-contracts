@@ -65,7 +65,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
     );
     event Canonical(address cOwner, bytes32 requestHash, bool isPassed);
 
-    constructor(address _registry) public {
+    constructor(address _registry) {
         registry = IRegistry(_registry);
     }
 

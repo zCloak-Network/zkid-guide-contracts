@@ -183,6 +183,9 @@ contract ProofStorage is Context, AuthControl, Properties {
         // bind to kilt account
         kiltAddr2Addr[_kiltAccount] = _user;
 
+        // add proofCid to proofs
+        proofs[_user][_requestHash] = _proofCid;
+
         emit AddProof(
             _user,
             _kiltAccount,

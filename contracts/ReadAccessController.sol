@@ -74,7 +74,7 @@ contract ReadAccessController is
         bytes32 _programHash,
         bool _expResult,
         bytes32 _attester
-    ) auth external override {
+    ) external override auth {
         bytes32 requestHash = getRequestHash(
             _cType,
             _fieldName,
