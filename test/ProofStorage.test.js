@@ -10,6 +10,9 @@ const {
     newProofCid,
     rootHash,
     expectResult,
+    blankField,
+    blankBytes20,
+    blankBytes32
 } = require("./testVariables.js");
 
 describe("ProofStorage contract", function () {
@@ -71,6 +74,19 @@ describe("ProofStorage contract", function () {
 
     describe("User add proof", function () {
         it("user1 can add proof successfully", async function () {
+            // storage should be non-empty
+            let rHash = await rac.getRequestHash(cType, fieldName, programHash, expectResult, attester);
+            console.log("blank cType: ", (await rac.requestInfo(rHash)).cType);
+            console.log("blank fieldName: ", (await rac.requestInfo(rHash)).fieldName);
+            console.log("blank programHash: ", (await rac.requestInfo(rHash)).programHash);
+            console.log("blank expResult", (await rac.requestInfo(rHash)).expResult);
+            console.log("blank attester", (await rac.requestInfo(rHash)).attester);
+            // assert((await rac.requestInfo(rHash)).cType, blankBytes32);
+            // assert((await rac.requestInfo(rHash)).fieldName, );
+            // assert((await rac.requestInfo(rHash)).programHash, blankBytes32);
+            // assert((await rac.requestInfo(rHash)).expResult, "");
+            // assert((await rac.requestInfo(rHash)).attester, blankBytes32);
+
             // user1 add proof
             const txAddProof = await proof.connect(user1).addProof(
                 kiltAccount,
@@ -99,9 +115,15 @@ describe("ProofStorage contract", function () {
                 );
 
             // check whether the proof exist or not
-            let rHash = await rac.getRequestHash(cType, fieldName, programHash, expectResult, attester);
             let proofExist = await proof.connect(user1).single_proof_exists(user1.address, rHash);
             expect(proofExist).to.equal(true);
+
+            // check the storage
+            assert((await rac.requestInfo(rHash)).cType, cType);
+            assert((await rac.requestInfo(rHash)).fieldName, fieldName);
+            assert((await rac.requestInfo(rHash)).programHash, programHash);
+            assert((await rac.requestInfo(rHash)).expResult, expectResult);
+            assert((await rac.requestInfo(rHash)).attester, attester);
         });
 
         it("Should fail if user readd the same proof", async function () {
@@ -135,4 +157,5 @@ describe("ProofStorage contract", function () {
 
     });
 
+    // TODO: add muilt-scene test
 });

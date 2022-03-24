@@ -24,7 +24,7 @@ describe("SimpleAggregator Contract", function () {
     let racAuth;
     let reputation;
     let reputationAuth;
-    let sAggregator;
+    let mockSAggregator;
     let sAggregatorAuth;
 
     let owner;
@@ -32,15 +32,15 @@ describe("SimpleAggregator Contract", function () {
     let attester = ethers.utils.formatBytes32String("attester");
     let kiltAccount = ethers.utils.formatBytes32String("kiltAccount");
 
-    let worker1;
-    let worker2;
-    let worker3;
-    let worker4;
-    let worker5;
+    let keeper1;
+    let keeper2;
+    let keeper3;
+    let keeper4;
+    let keeper5;
 
     beforeEach(async function () {
-        [ owner, user1, worker1, worker2, worker3, worker4, worker5] = await ethers.getSigners();
-        let workers = [worker1.address, worker2.address, worker3.address, worker4.address, worker5.address];
+        [ owner, user1, keeper1, keeper2, keeper3, keeper4, keeper5] = await ethers.getSigners();
+        let keepers = [keeper1.address, keeper2.address, keeper3.address, keeper4.address, keeper5.address];
 
         const Registry = await ethers.getContractFactory("Registry", owner);
         const Properties = await ethers.getContractFactory("Properties", owner);
@@ -76,7 +76,7 @@ describe("SimpleAggregator Contract", function () {
         reputationAuth = await ReputationAuth.deploy(registry.address);
         await reputationAuth.deployed();
 
-        sAggregatorAuth = await SimpleAggregatorAuth.deploy(workers, registry.address);
+        sAggregatorAuth = await SimpleAggregatorAuth.deploy(keepers, registry.address);
         await sAggregatorAuth.deployed();
 
         // library linking contract
@@ -88,18 +88,18 @@ describe("SimpleAggregator Contract", function () {
         reputation = await ReputationV1.deploy(registry.address);
         await reputation.deployed();
 
-        const SimpleAggregator = await ethers.getContractFactory("SimpleAggregator", {
+        const MockSAggregator = await ethers.getContractFactory("MockSimpleAggregator", {
             libraries: {
                 AddressesUtils: addressesUtils.address,
                 Bytes32sUtils: bytes32sUtils.address,
             },
         }, owner);
-        sAggregator = await SimpleAggregator.deploy(registry.address);
-        await sAggregator.deployed();
+        mockSAggregator = await MockSAggregator.deploy(registry.address);
+        await mockSAggregator.deployed();
 
         // AuthControl setting
         await rac.setAuthority(racAuth.address);
-        await sAggregator.setAuthority(sAggregatorAuth.address);
+        await mockSAggregator.setAuthority(sAggregatorAuth.address);
         await reputation.setAuthority(reputationAuth.address);
 
         // set regisry
@@ -107,7 +107,7 @@ describe("SimpleAggregator Contract", function () {
         await registry.setAddressProperty(properties.CONTRACT_REQUEST(), rac.address);
         await registry.setAddressProperty(properties.CONTRACT_MAIN_KILT(), proof.address);
         await registry.setAddressProperty(properties.CONTRACT_REPUTATION(), reputation.address);
-        await registry.setAddressProperty(properties.CONTRACT_AGGREGATOR(), sAggregator.address);
+        await registry.setAddressProperty(properties.CONTRACT_AGGREGATOR(), mockSAggregator.address);
 
         // user1 add proof first
         await proof.connect(user1).addProof(
@@ -122,14 +122,20 @@ describe("SimpleAggregator Contract", function () {
         );
     });
 
-    describe("worker submit verify result", function () {
-        it("should success if worker submit verify result(one worker)", async function () {
+    describe("keeper submit verification result", function () {
+        it("should success if keeper submit verification result(one keeper)", async function () {
             let rHash = await rac.getRequestHash(cType, fieldName, programHash, expectResult, attester);
-            await sAggregator.connect(worker1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
-            
+            let oHash = await mockSAggregator.getOutputHash(rootHash, isPassed_t, attester);
+
             // check storage value
-            let oHash = await sAggregator.getOutputHash(rootHash, isPassed_t, attester);
-            // TODO: add mock contract and set getter function for contract variable(SimpleAggregator.sol)
+            await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
+            assert(await mockSAggregator.getKeeperSubmissions(keeper1.address, rHash), oHash);
+            assert(await mockSAggregator.getVoterAddress(user1.address, rHash, oHash, 0), keeper1.address);
+            assert(await mockSAggregator.getVoterIndex(user1.address, rHash, oHash, keeper1.address), 0);
+            assert(await mockSAggregator.getVoteCount(user1.address, rHash, oHash), 1);
+            assert(await mockSAggregator.getBytes32ListOutputHash(user1.address, rHash, 0), oHash);
+
+            // TODO: check the reward storage at line 114 of SimpleAggregator.sol
         });
     });
 });

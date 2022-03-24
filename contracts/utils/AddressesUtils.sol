@@ -92,7 +92,7 @@ library AddressesUtils {
     }
 
     /// @dev Test function: get member mapping variable of struct Addresses
-    function getIndex(Addresses storage _addresses, address _project)
+    function getAddressesIndex(Addresses storage _addresses, address _project)
         public
         view
         returns (uint256)

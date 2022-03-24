@@ -13,9 +13,9 @@ let expectResult = true;
 let isPassed_t = true;
 let isPassed_f = false;
 let customThreshold = 2;
-let blankAddress = "0x0000000000000000000000000000000000000000";
+let blankBytes20 = "0x0000000000000000000000000000000000000000";
 let blankField = "";
-let blankRootHash = "0x0000000000000000000000000000000000000000000000000000000000000000";
+let blankBytes32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 module.exports = {
     // data
@@ -33,7 +33,7 @@ module.exports = {
     isPassed_t: isPassed_t,
     isPassed_f: isPassed_f,
     customThreshold: customThreshold,
-    blankAddress: blankAddress,
+    blankBytes20: blankBytes20,
     blankField: blankField,
-    blankRootHash: blankRootHash
+    blankBytes32: blankBytes32
 }

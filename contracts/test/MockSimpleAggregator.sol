@@ -13,11 +13,59 @@ contract MockSimpleAggregator is SimpleAggregator {
     constructor(address _registry) SimpleAggregator(_registry) {}
 
     function getMinSubmission(
-        address _user,
-        bytes32 _requestHash
+        address user,
+        bytes32 requestHash
     ) public view returns (uint32) {
-        return minSubmission[_user][_requestHash];
+        return minSubmission[user][requestHash];
     }
 
-    // TODO:add more getter function
+    function getKeeperSubmissions(
+        address keeper,
+        bytes32 requestHash
+    ) public view returns (bytes32) {
+        return keeperSubmissions[keeper][requestHash];
+    }
+
+    function getVoterAddress(
+        address user,
+        bytes32 requestHash,
+        bytes32 outputHash,
+        uint256 num
+    ) public view returns (address) {
+        AddressesUtils.Addresses storage voters = votes[user][
+            requestHash
+        ][outputHash].keepers;
+
+        return voters.getAddress(num);
+    }
+
+    function getVoterIndex(
+        address user,
+        bytes32 requestHash,
+        bytes32 outputHash,
+        address keeper
+    ) public view returns (uint256) {
+        AddressesUtils.Addresses storage voters = votes[user][
+            requestHash
+        ][outputHash].keepers;
+
+        return voters.getAddressesIndex(keeper);
+    }
+
+    function getVoteCount(
+        address user,
+        bytes32 requestHash,
+        bytes32 outputHash
+    )public view returns (uint32) {
+        return votes[user][requestHash][outputHash].voteCount;
+    }
+   
+    function getBytes32ListOutputHash(
+        address user,
+        bytes32 requestHash,
+        uint256 num
+    ) public view returns (bytes32) {
+        Bytes32sUtils.Bytes32List storage oHashNum = outputHashes[user][requestHash];
+        return oHashNum.getBytes32(num);
+    }
 }
