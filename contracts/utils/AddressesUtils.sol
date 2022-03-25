@@ -82,15 +82,6 @@ library AddressesUtils {
         return false;
     }
 
-    /// @dev Test function: get member address array of struct Addresses
-    function getAddress(Addresses storage _addresses, uint256 _num)
-        public
-        view
-        returns (address)
-    {
-        return _addresses.addresses[_num];
-    }
-
     /// @dev Test function: get member mapping variable of struct Addresses
     function getAddressesIndex(Addresses storage _addresses, address _project)
         public

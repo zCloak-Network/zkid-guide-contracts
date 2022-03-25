@@ -36,7 +36,7 @@ contract MockSimpleAggregator is SimpleAggregator {
             requestHash
         ][outputHash].keepers;
 
-        return voters.getAddress(num);
+        return voters.element(num);
     }
 
     function getVoterIndex(
@@ -66,6 +66,6 @@ contract MockSimpleAggregator is SimpleAggregator {
         uint256 num
     ) public view returns (bytes32) {
         Bytes32sUtils.Bytes32List storage oHashNum = outputHashes[user][requestHash];
-        return oHashNum.getBytes32(num);
+        return oHashNum.element(num);
     }
 }
