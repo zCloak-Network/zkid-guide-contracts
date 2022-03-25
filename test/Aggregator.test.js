@@ -22,7 +22,7 @@ describe("SimpleAggregator Contract", function () {
     let proof;
     let rac;
     let racAuth;
-    let reputation;
+    let mockReputation;
     let reputationAuth;
     let mockSAggregator;
     let sAggregatorAuth;
@@ -39,7 +39,7 @@ describe("SimpleAggregator Contract", function () {
     let keeper5;
 
     beforeEach(async function () {
-        [ owner, user1, keeper1, keeper2, keeper3, keeper4, keeper5] = await ethers.getSigners();
+        [owner, user1, keeper1, keeper2, keeper3, keeper4, keeper5] = await ethers.getSigners();
         let keepers = [keeper1.address, keeper2.address, keeper3.address, keeper4.address, keeper5.address];
 
         const Registry = await ethers.getContractFactory("Registry", owner);
@@ -80,13 +80,13 @@ describe("SimpleAggregator Contract", function () {
         await sAggregatorAuth.deployed();
 
         // library linking contract
-        const ReputationV1 = await ethers.getContractFactory("Reputation", {
+        const MockReputation = await ethers.getContractFactory("MockReputation", {
             libraries: {
-                AddressesUtils: addressesUtils.address,
-            },
+                AddressesUtils: addressesUtils.address
+            }
         }, owner);
-        reputation = await ReputationV1.deploy(registry.address);
-        await reputation.deployed();
+        mockReputation = await MockReputation.deploy(registry.address);
+        await mockReputation.deployed();
 
         const MockSAggregator = await ethers.getContractFactory("MockSimpleAggregator", {
             libraries: {
@@ -100,13 +100,13 @@ describe("SimpleAggregator Contract", function () {
         // AuthControl setting
         await rac.setAuthority(racAuth.address);
         await mockSAggregator.setAuthority(sAggregatorAuth.address);
-        await reputation.setAuthority(reputationAuth.address);
+        await mockReputation.setAuthority(reputationAuth.address);
 
         // set regisry
         await registry.setUintProperty(properties.UINT32_THRESHOLD(), 3);
         await registry.setAddressProperty(properties.CONTRACT_REQUEST(), rac.address);
         await registry.setAddressProperty(properties.CONTRACT_MAIN_KILT(), proof.address);
-        await registry.setAddressProperty(properties.CONTRACT_REPUTATION(), reputation.address);
+        await registry.setAddressProperty(properties.CONTRACT_REPUTATION(), mockReputation.address);
         await registry.setAddressProperty(properties.CONTRACT_AGGREGATOR(), mockSAggregator.address);
 
         // user1 add proof first
@@ -128,14 +128,28 @@ describe("SimpleAggregator Contract", function () {
             let oHash = await mockSAggregator.getOutputHash(rootHash, isPassed_t, attester);
 
             // check storage value
-            await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
+            let tx = await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
             assert(await mockSAggregator.getKeeperSubmissions(keeper1.address, rHash), oHash);
             assert(await mockSAggregator.getVoterAddress(user1.address, rHash, oHash, 0), keeper1.address);
             assert(await mockSAggregator.getVoterIndex(user1.address, rHash, oHash, keeper1.address), 0);
             assert(await mockSAggregator.getVoteCount(user1.address, rHash, oHash), 1);
             assert(await mockSAggregator.getBytes32ListOutputHash(user1.address, rHash, 0), oHash);
+            // check reputation storage value
+            assert(await mockReputation.getIRutationPoint(rHash, keeper1.address), 1);
+            assert(await mockReputation.getKeeperTotalReputations(keeper1.address), 1);
 
-            // TODO: check the reward storage at line 114 of SimpleAggregator.sol
+            // should emit 'Reward' event
+            expect(tx).to.emit(mockReputation, 'Reward')
+                .withArgs(
+                    rHash,
+                    keeper1.address,
+                    await mockReputation.getIRutationPoint(rHash, keeper1.address),
+                    await mockReputation.getCReputations(rHash, keeper1.address),
+                    await mockReputation.getKeeperTotalReputations(keeper1.address)
+                );
         });
+
+        // TODO: add multi-keeper conditions 
+        it("", async function () { });
     });
 });
