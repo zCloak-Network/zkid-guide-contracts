@@ -52,6 +52,10 @@ contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC13
     // TODO: change this to requestHash => worker => rcommunityRputation
     mapping(bytes32 => mapping(address => int128)) communityReputations;
 
+    // emit when keeper add successfully add token
+    // Add(token, keeper)
+    event Add(address token, address executor);
+
     // emit when worker successfully claim the reward
     // Claim(token, amount, worker)
     event Claim(address token, uint256 amount, address claimer);
@@ -78,6 +82,22 @@ contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC13
 
     constructor(address _registry) {
         registry = IRegistry(_registry);
+    }
+
+    // batch add token for reward keeper
+    function batchAdd(bytes32 _requestHash, address[] memory _token) public {
+        AddressesUtils.Addresses storage tokens = payments[_requestHash];
+        for (uint256 i = 0; i < _token.length; i++) {
+            tokens._push(_token[i]);
+            emit Add(_token[i], _msgSender());
+        }
+    }
+
+    // add token as verification reward
+    function addToken(bytes32 _requestHash, address _token) public {
+        AddressesUtils.Addresses storage tokens = payments[_requestHash];
+        tokens._push(_token);
+        emit Add(_token, _msgSender());
     }
 
     // batch claim the multiple-token verification reward
