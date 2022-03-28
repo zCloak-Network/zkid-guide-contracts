@@ -10,7 +10,10 @@ contract MockSimpleAggregator is SimpleAggregator {
     using AddressesUtils for AddressesUtils.Addresses;
     using Bytes32sUtils for Bytes32sUtils.Bytes32List;
 
-    constructor(address _registry) SimpleAggregator(_registry) {}
+    constructor(
+        address _registry,
+        address _request
+    ) SimpleAggregator(_registry, _request) {}
 
     function getMinSubmission(
         address user,
@@ -67,5 +70,27 @@ contract MockSimpleAggregator is SimpleAggregator {
     ) public view returns (bytes32) {
         Bytes32sUtils.Bytes32List storage oHashNum = outputHashes[user][requestHash];
         return oHashNum.element(num);
+    }
+
+    function getFinalResult(
+        address user,
+        bytes32 requestHash
+    ) public view returns (bool) {
+        Final storage finalRes = zkCredential[user][requestHash];
+        return finalRes.isPassed;
+    }
+
+    function getFinalTimestamp(
+        address user,
+        bytes32 requestHash
+    ) public view returns (uint256) {
+        Final storage finalRes = zkCredential[user][requestHash];
+        return finalRes.agreeAt;
+    }
+
+    function getDid(
+        bytes32 rootHash
+    ) public view returns (address) {
+        return did[rootHash];
     }
 }
