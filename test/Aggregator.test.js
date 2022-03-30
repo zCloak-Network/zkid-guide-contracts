@@ -94,7 +94,7 @@ describe("SimpleAggregator Contract", function () {
                 Bytes32sUtils: bytes32sUtils.address,
             },
         }, owner);
-        mockSAggregator = await MockSAggregator.deploy(registry.address);
+        mockSAggregator = await MockSAggregator.deploy(registry.address, rac.address);
         await mockSAggregator.deployed();
 
         // AuthControl setting
@@ -103,7 +103,7 @@ describe("SimpleAggregator Contract", function () {
         await mockReputation.setAuthority(reputationAuth.address);
 
         // set regisry
-        await registry.setUintProperty(properties.UINT32_THRESHOLD(), 3);
+        await registry.setUint32Property(properties.UINT32_THRESHOLD(), 3);
         await registry.setAddressProperty(properties.CONTRACT_REQUEST(), rac.address);
         await registry.setAddressProperty(properties.CONTRACT_MAIN_KILT(), proof.address);
         await registry.setAddressProperty(properties.CONTRACT_REPUTATION(), mockReputation.address);
@@ -135,8 +135,12 @@ describe("SimpleAggregator Contract", function () {
             assert(await mockSAggregator.getVoteCount(user1.address, rHash, oHash), 1);
             assert(await mockSAggregator.getBytes32ListOutputHash(user1.address, rHash, 0), oHash);
             // check reputation storage value
-            assert(await mockReputation.getIRutationPoint(rHash, keeper1.address), 1);
-            assert(await mockReputation.getKeeperTotalReputations(keeper1.address), 1);
+            expect((await mockReputation.getIRutationPoint(rHash, keeper1.address)).toNumber())
+                .to.equal(0);
+            expect((await mockReputation.getCReputations(rHash, keeper1.address)).toNumber())
+                .to.equal(1);
+            expect((await mockReputation.getKeeperTotalReputations(keeper1.address)).toNumber())
+                .to.equal(1);
 
             // should emit 'Reward' event
             expect(tx).to.emit(mockReputation, 'Reward')
@@ -149,7 +153,52 @@ describe("SimpleAggregator Contract", function () {
                 );
         });
 
-        // TODO: add multi-keeper conditions 
-        it("", async function () { });
+        it("should success if multi-keeper add verification result", async function () {
+            let rHash = await rac.getRequestHash(cType, fieldName, programHash, expectResult, attester);
+
+            // verification result is false
+            await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_f, attester);
+            await mockSAggregator.connect(keeper2).submit(user1.address, rHash, cType, rootHash, isPassed_f, attester);
+            // // verification result is true
+            await mockSAggregator.connect(keeper3).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
+            await mockSAggregator.connect(keeper4).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
+            await mockSAggregator.connect(keeper5).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
+
+            // check the storage
+            expect(await mockSAggregator.getFinalResult(user1.address, rHash)).to.equal(isPassed_t);
+            expect(await mockSAggregator.getDid(rootHash)).to.equal(user1.address);
+            expect((await mockReputation.getKeeperTotalReputations(keeper1.address)).toNumber()).to.equal(-1);
+            expect((await mockReputation.getKeeperTotalReputations(keeper2.address)).toNumber()).to.equal(-1);
+            expect((await mockReputation.getKeeperTotalReputations(keeper5.address)).toNumber()).to.equal(3);
+        });
+
+        it("Should stop submit if verification result has up to THRESHOLD", async function () {
+            let rHash = await rac.getRequestHash(cType, fieldName, programHash, expectResult, attester);
+            // THRESHOLD is 3
+            await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
+            await mockSAggregator.connect(keeper2).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
+            await mockSAggregator.connect(keeper3).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
+
+            await expect(mockSAggregator.connect(keeper4).submit(user1.address, rHash, cType, rootHash, isPassed_f, attester))
+                .to.be.revertedWith("Err: Request task has already been finished");
+
+            await expect(mockSAggregator.connect(keeper5).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester))
+                .to.be.revertedWith("Err: Request task has already been finished");
+        });
+
+        it("Should revert if keeper submit twice for the same request task", async function () {
+            let rHash = await rac.getRequestHash(cType, fieldName, programHash, expectResult, attester);
+            await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
+
+            await expect(mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester))
+                .to.be.revertedWith("Err: keeper can only submit once to the same request task");
+        });
+
+        it("Should revert if user use fake attester(keeper is loyal)", async function () {
+            let rHash = await rac.getRequestHash(cType, fieldName, programHash, expectResult, attester);
+            let kiltAttester = ethers.utils.formatBytes32String("true_attester");
+            await expect(mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_f, kiltAttester))
+                .to.be.revertedWith("Err: this attester does not match one which provided by user");
+        });
     });
 });
