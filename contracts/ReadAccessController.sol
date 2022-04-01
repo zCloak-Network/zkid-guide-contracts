@@ -193,8 +193,8 @@ contract ReadAccessController is
         assembly {
             let ptr := mload(0x40)
             calldatacopy(ptr, 0, calldatasize())
-            cOwner := mload(add(ptr, 0x100))
-            requestHash := mload(add(ptr, 0x120))
+            cOwner := mload(add(ptr, 0xa4))
+            requestHash := mload(add(ptr, 0xc4))
         }
 
         Meter storage meter = applied[requestHash][_operator];

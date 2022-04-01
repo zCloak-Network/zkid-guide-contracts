@@ -254,10 +254,12 @@ contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC13
         assembly {
             let ptr := mload(0x40)
             calldatacopy(ptr, 0, calldatasize())
-            requestHash := mload(add(ptr, 0x100))
+            requestHash := mload(add(ptr, 0xc4))
         }
 
         rewardPool[requestHash][_msgSender()].tryAdd(_amount);
+    
+        return IERC1363Receiver(this).onTransferReceived.selector;
         // TODO: add event
     }
 
