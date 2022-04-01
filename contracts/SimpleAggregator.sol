@@ -93,7 +93,10 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         );
 
         // judge user's attester whether the atterster which keeper requests to kilt or not
-        require(judgeAttester(_requestHash, _attester), "attester non-compitable");
+        require(
+            judgeAttester(_requestHash, _attester),
+            "Err: this attester does not match one which provided by user"
+        );
 
         // initialize the min submission requirement
         if (minSubmission[_cOwner][_requestHash] == 0) {
