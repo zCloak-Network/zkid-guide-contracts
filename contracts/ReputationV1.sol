@@ -19,6 +19,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC1363Receiver, IReputation {
     int128 constant PUNISH = -2;
     int128 constant REWARD = 1;
+    uint256 constant POINT = 1;
 
     using SafeMath for uint256;
     using AddressesUtils for AddressesUtils.Addresses;
@@ -144,7 +145,7 @@ contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC13
         uint256 _withdraw,
         IndividualReputation storage _individualR
     ) nonReentrant internal returns (bool) {
-        _individualR.claimedAmount[_token].add(_withdraw);
+        _individualR.claimedAmount[_token] += _withdraw;
         IERC1363(_token).transfer(_claimer, _withdraw);
 
         emit Claim(_token, _withdraw, _claimer);
@@ -183,6 +184,7 @@ contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC13
         }
 
         reputations[_worker] += PUNISH;
+        totalPoints[_requestHash] -= (2 * POINT);
 
         emit Punish(
             _requestHash,
@@ -211,6 +213,7 @@ contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC13
         }
         // update total reputation
         reputations[_worker] += REWARD;
+        totalPoints[_requestHash] += POINT;
 
         emit Reward(
             _requestHash,

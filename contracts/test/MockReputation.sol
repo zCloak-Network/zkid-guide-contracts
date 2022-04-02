@@ -40,4 +40,21 @@ contract MockReputation is Reputation {
     {
         return reputations[keeper];
     }
+
+    function getTotalReward(bytes32 requestHash, address token)
+        public
+        view
+        returns (uint256)
+    {
+        return rewardPool[requestHash][token];
+    }
+
+    function getToken(bytes32 requestHash, uint256 index)
+        public
+        view
+        returns (address)
+    {
+        AddressesUtils.Addresses storage token = payments[requestHash];
+        return token.element(index);
+    }
 }
