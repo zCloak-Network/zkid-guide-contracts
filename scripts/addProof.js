@@ -6,22 +6,26 @@
 ///
 const { ethers } = require("hardhat");
 
-const { kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult } = require("./variable.js");
+let attester = ethers.utils.formatBytes32String("attester");
+let newAttester = ethers.utils.formatBytes32String('newAttester');
+let kiltAccount = ethers.utils.formatBytes32String("kiltAccount");
+let kiltAccountOther = ethers.utils.formatBytes32String("kiltAccountOther");
 
-const addressKiltProofsV1 = "CONTRACT_KILT_ADDRESS";
+const { kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult } = require("./variable.js");
+const proofStorage = {
+    address: 'CONTRACT_PROOFSTORAGE_ADDRESS'
+}
 
 async function main() {
     // create contract intance
     const user1 = await ethers.getSigner(1);
-    const KiltProofsV1 = await ethers.getContractFactory("KiltProofsV1", user1);
-    const kilt = await KiltProofsV1.attach(addressKiltProofsV1);
+    const ProofStorage = await ethers.getContractFactory("ProofStorage", user1);
+    const proof = ProofStorage.attach(proofStorage.address);
 
-    // character add proof
-    console.log("check the proof exists or not? ", await kilt.single_proof_exists(user1.address, cType, programHash));
-    const txAddProof = await kilt.addProof(kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult);
+    // user add proof
+    const txAddProof = await proof.addProof(kiltAccount, attester, cType, fieldName, programHash, proofCid, rootHash, expectResult);
     await txAddProof.wait();
-    console.log("Successfully send the addProof transcation.");
-    console.log("check the proof exists or not? ", await kilt.single_proof_exists(user1.address, cType, programHash));
+    console.log("SUCCESS: add proof");
 }
 
 main()

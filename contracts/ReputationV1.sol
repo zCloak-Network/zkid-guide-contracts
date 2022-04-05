@@ -19,6 +19,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC1363Receiver, IReputation {
     int128 constant PUNISH = -2;
     int128 constant REWARD = 1;
+    uint256 constant POINT = 1;
 
     using SafeMath for uint256;
     using AddressesUtils for AddressesUtils.Addresses;
@@ -52,6 +53,10 @@ contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC13
     // TODO: change this to requestHash => worker => rcommunityRputation
     mapping(bytes32 => mapping(address => int128)) communityReputations;
 
+    // emit when keeper add successfully add token
+    // Add(token, keeper)
+    event Add(address token, address executor);
+
     // emit when worker successfully claim the reward
     // Claim(token, amount, worker)
     event Claim(address token, uint256 amount, address claimer);
@@ -78,6 +83,22 @@ contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC13
 
     constructor(address _registry) {
         registry = IRegistry(_registry);
+    }
+
+    // batch add token for reward keeper
+    function batchAdd(bytes32 _requestHash, address[] memory _token) public {
+        AddressesUtils.Addresses storage tokens = payments[_requestHash];
+        for (uint256 i = 0; i < _token.length; i++) {
+            tokens._push(_token[i]);
+            emit Add(_token[i], _msgSender());
+        }
+    }
+
+    // add token as verification reward
+    function addToken(bytes32 _requestHash, address _token) public {
+        AddressesUtils.Addresses storage tokens = payments[_requestHash];
+        tokens._push(_token);
+        emit Add(_token, _msgSender());
     }
 
     // batch claim the multiple-token verification reward
@@ -124,7 +145,7 @@ contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC13
         uint256 _withdraw,
         IndividualReputation storage _individualR
     ) nonReentrant internal returns (bool) {
-        _individualR.claimedAmount[_token].add(_withdraw);
+        _individualR.claimedAmount[_token] += _withdraw;
         IERC1363(_token).transfer(_claimer, _withdraw);
 
         emit Claim(_token, _withdraw, _claimer);
@@ -163,6 +184,7 @@ contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC13
         }
 
         reputations[_worker] += PUNISH;
+        totalPoints[_requestHash] -= (2 * POINT);
 
         emit Punish(
             _requestHash,
@@ -191,6 +213,7 @@ contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC13
         }
         // update total reputation
         reputations[_worker] += REWARD;
+        totalPoints[_requestHash] += POINT;
 
         emit Reward(
             _requestHash,
@@ -234,10 +257,13 @@ contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC13
         assembly {
             let ptr := mload(0x40)
             calldatacopy(ptr, 0, calldatasize())
-            requestHash := mload(add(ptr, 0x100))
+            requestHash := mload(add(ptr, 0xc4))
         }
 
-        rewardPool[requestHash][_msgSender()].tryAdd(_amount);
+        (bool res, uint256 rPool) = rewardPool[requestHash][_msgSender()].tryAdd(_amount);
+        rewardPool[requestHash][_msgSender()] += rPool;
+    
+        return IERC1363Receiver(this).onTransferReceived.selector;
         // TODO: add event
     }
 

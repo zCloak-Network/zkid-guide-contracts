@@ -1,68 +1,129 @@
 ///
 /// @author vsszhang
 /// @dev This is a deploy script, you can run this script to deploy all contract.
-/// Also, this script can help you add some useful things.
+/// Also, this script can help you initialize some useful things.
 ///
 const { ethers } = require("hardhat");
 
 async function main() {
     // deploy the contract
-    const [owner] = await ethers.getSigners();
-    console.log("Contract owner address: ", owner.address);
+    const owner = await ethers.getSigner(0);
+    const keeper1 = await ethers.getSigner(6);
+    const keeper2 = await ethers.getSigner(7);
+    const keeper3 = await ethers.getSigner(8);
+    let keepers = [ keeper1.address, keeper2.address, keeper3.address ];
+    console.log("------------------ EXECUTION ------------------\n");
+    console.log("\tContract deploying...\n");
 
     const Registry = await ethers.getContractFactory("Registry", owner);
     const Properties = await ethers.getContractFactory("Properties", owner);
-    const Whitelist = await ethers.getContractFactory("Whitelist", owner);
-    const KiltProofsV1 = await ethers.getContractFactory("KiltProofsV1", owner);
-    const RegulatedTransfer = await ethers.getContractFactory("RegulatedTransfer", owner);
-    const SampleToken = await ethers.getContractFactory("SampleToken", owner);
+    const AddressesUtils = await ethers.getContractFactory("AddressesUtils", owner);
+    const Bytes32sUtils = await ethers.getContractFactory("Bytes32sUtils", owner);
+    const ProofStorage = await ethers.getContractFactory("ProofStorage", owner);
+    const RAC = await ethers.getContractFactory("ReadAccessController", owner);
+    const RACAuth = await ethers.getContractFactory("RACAuth", owner);
+    const ReputationAuth = await ethers.getContractFactory("ReputationAuth", owner);
+    const SimpleAggregatorAuth = await ethers.getContractFactory("SimpleAggregatorAuth", owner);
 
-    const registry = await Registry.deploy();
+    let registry = await Registry.deploy();
     await registry.deployed();
-    console.log("Registry address: ", registry.address);
 
-    const properties = await Properties.deploy();
-    await properties.deployed();
-    console.log("Properties address: ", properties.address);
+    let property = await Properties.deploy();
+    await property.deployed();
 
-    const whitelist = await Whitelist.deploy();
-    await whitelist.deployed();
-    console.log("Whitelist address: ", whitelist.address);
+    let addressesUtils = await AddressesUtils.deploy();
+    await addressesUtils.deployed();
 
-    const kilt = await KiltProofsV1.deploy(registry.address);
-    await kilt.deployed();
-    console.log("Kilt address: ", kilt.address);
+    let bytes32sUtils = await Bytes32sUtils.deploy();
+    await bytes32sUtils.deployed();
 
-    const regulatedTransfer = await RegulatedTransfer.deploy(registry.address);
-    await regulatedTransfer.deployed();
-    console.log("RegulatedTransfer address: ", regulatedTransfer.address);
+    let proof = await ProofStorage.deploy(registry.address);
+    await proof.deployed();
 
-    const sampleToken = await SampleToken.deploy("TOKEN_NAME", "MTK");
-    await sampleToken.deployed();
-    console.log("SampleToken address: ", sampleToken.address);
-    
+    let rac = await RAC.deploy(registry.address);
+    await rac.deployed();
+
+    let racAuth = await RACAuth.deploy(registry.address);
+    await racAuth.deployed();
+
+    let reputationAuth = await ReputationAuth.deploy(registry.address);
+    await reputationAuth.deployed();
+
+    let sAggregatorAuth = await SimpleAggregatorAuth.deploy(keepers, registry.address);
+    await sAggregatorAuth.deployed();
+
+    // library linking contract
+    const Reputation = await ethers.getContractFactory(
+        "Reputation",
+        { libraries: { AddressesUtils: addressesUtils.address } },
+        owner
+    );
+    let reputation = await Reputation.deploy(registry.address);
+    await reputation.deployed();
+
+    const SAggregator = await ethers.getContractFactory(
+        "SimpleAggregator",
+        {
+            libraries: {
+                AddressesUtils: addressesUtils.address,
+                Bytes32sUtils: bytes32sUtils.address,
+            },
+        },
+        owner
+    );
+    let sAggregator = await SAggregator.deploy(registry.address, rac.address);
+    await sAggregator.deployed();
+
     // basic conditions
-    // set up whitelist
-    const txRegistryCONTRACT_WHITELIST = await registry.setAddressProperty(properties.CONTRACT_WHITELIST(), whitelist.address);
-    await txRegistryCONTRACT_WHITELIST.wait();
-    console.log("CONTRACT_WHITELIST property address: ", await registry.addressOf(properties.CONTRACT_WHITELIST()));
-    console.log("Whitelist address: ", whitelist.address);
+    // AuthControl setting
+    console.log('\tAuthority control setting...\n');
+    let txRACAuth = await rac.setAuthority(racAuth.address);
+    await txRACAuth.wait();
 
-    // set threshold as you want, default is 1
-    const txRegistryUINT_APPROVE_THRESHOLD = await registry.setUintProperty(properties.UINT_APPROVE_THRESHOLD(), 1);
-    await txRegistryUINT_APPROVE_THRESHOLD.wait();
-    console.log("UINT_APPROVE_THRESHOLD number: ", (await registry.uintOf(properties.UINT_APPROVE_THRESHOLD())).toString());
+    let txSAggregatorAuth = await sAggregator.setAuthority(sAggregatorAuth.address);
+    await txSAggregatorAuth.wait();
 
-    // set CONTRACT_MAIN_KILT
-    const txRegistryCONTRACT_MAIN_KILT = await registry.setAddressProperty(properties.CONTRACT_MAIN_KILT(), kilt.address);
-    await txRegistryCONTRACT_MAIN_KILT.wait();
-    console.log("CONTRACT_MAIN_KILT property address: ", await registry.addressOf(properties.CONTRACT_MAIN_KILT()));
-    console.log("KiltProofsV1 address: ", kilt.address);
+    let txReputationAuth = await reputation.setAuthority(reputationAuth.address);
+    await txReputationAuth.wait();
 
-    // grant role to contract 'RegulatedTransfer'
-    const txGrantRoleREGULATED_ERC20toRT = await kilt.grantRole(kilt.REGULATED_ERC20(), regulatedTransfer.address);
-    await txGrantRoleREGULATED_ERC20toRT.wait();
-    console.log("Contract 'RegulatedTransfer' has REGULATED_ERC20 role? ", await kilt.hasRole(kilt.REGULATED_ERC20(), regulatedTransfer.address));
+    // Registry setting
+    console.log('\tRegistry setting...\n');
+    // TODO: threshold is n:)?
+    let txThreshold = await registry.setUint32Property(property.UINT32_THRESHOLD(), 1);
+    await txThreshold.wait();
+
+    let txRequest = await registry.setAddressProperty(property.CONTRACT_REQUEST(), rac.address);
+    await txRequest.wait();
+
+    let txMainKilt = await registry.setAddressProperty(property.CONTRACT_MAIN_KILT(), proof.address);
+    await txMainKilt.wait();
+
+    let txReputation = await registry.setAddressProperty(property.CONTRACT_REPUTATION(), reputation.address);
+    await txReputation.wait();
+
+    let txAggregator = await registry.setAddressProperty(property.CONTRACT_AGGREGATOR(), sAggregator.address);
+    await txAggregator.wait();
+
+    let txReward = await registry.setAddressProperty(property.CONTRACT_REWARD(), reputation.address);
+    await txReward.wait();
+
+    let txReadGateway = await registry.setAddressProperty(property.CONTRACT_READ_GATEWAY(), rac.address);
+    await txReadGateway.wait();
+
+    console.log("\n------------------ SUMMARIZE ------------------\n");
+    console.log(`\tContract owner:\n\t${owner.address}\n`);
+    console.log(`\tRegistry address:\n\t${registry.address}\n`);
+    console.log(`\tProperties address:\n\t${property.address}\n`);
+    console.log(`\tAddressesUtils address:\n\t${addressesUtils.address}\n`);
+    console.log(`\tBytes32sUtils address:\n\t${bytes32sUtils.address}\n`);
+    console.log(`\tProofStorage address:\n\t${proof.address}\n`);
+    console.log(`\tReadAccessController address:\n\t${rac.address}\n`);
+    console.log(`\tRACAuth address:\n\t${racAuth.address}\n`);
+    console.log(`\tReputationAuth address:\n\t${reputationAuth.address}\n`);
+    console.log(`\tSimpleAggregatorAuth address:\n\t${sAggregatorAuth.address}\n`);
+    console.log(`\tReputation address:\n\t${reputation.address}\n`);
+    console.log(`\tSimpleAggregator address:\n\t${sAggregator.address}`);
+    console.log("\n-----------------------------------------------\n");
 
 }
 

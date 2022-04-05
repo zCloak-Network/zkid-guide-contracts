@@ -80,4 +80,14 @@ library Bytes32sUtils {
         }
         return false;
     }
+
+    /// @dev Test function: get member bytes32 array of struct Bytes32List
+    function getBytes32ListIndex(Bytes32List storage _bytes32Array, bytes32 _hashNum)
+        public
+        view
+        returns (uint256)
+    {
+        return _bytes32Array.index[_hashNum];
+    }
+
 }

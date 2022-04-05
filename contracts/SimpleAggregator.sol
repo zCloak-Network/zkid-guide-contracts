@@ -36,6 +36,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
 
     // registry where we query global settings
     IRegistry public registry;
+    IRequest public request;
 
     // config
     // user => requestHash => minSubmissionRequirement
@@ -65,8 +66,9 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
     );
     event Canonical(address cOwner, bytes32 requestHash, bool isPassed);
 
-    constructor(address _registry) public {
+    constructor(address _registry, address _request) {
         registry = IRegistry(_registry);
+        request = IRequest(_request);
     }
 
     function submit(
@@ -90,6 +92,12 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
             "Err: Request task has already been finished"
         );
 
+        // judge user's attester whether the atterster which keeper requests to kilt or not
+        require(
+            judgeAttester(_requestHash, _attester),
+            "Err: this attester does not match one which provided by user"
+        );
+
         // initialize the min submission requirement
         if (minSubmission[_cOwner][_requestHash] == 0) {
             uint32 threshold = registry.uint32Of(Properties.UINT32_THRESHOLD);
@@ -105,7 +113,9 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         vote.voteCount += 1;
 
         // add outputHash
-        outputHashes[_cOwner][_requestHash]._push(outputHash);
+        if (!outputHashes[_cOwner][_requestHash].exists(outputHash)) {
+            outputHashes[_cOwner][_requestHash]._push(outputHash); 
+        }
 
         // reward keeper
         IReputation reputation = IReputation(
@@ -182,5 +192,14 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         bytes32 _attester
     ) public pure returns (bytes32 oHash) {
         oHash = keccak256(abi.encodePacked(_rootHash, _isPassed, _attester));
+    }
+
+    function judgeAttester(
+        bytes32 requestHash,
+        bytes32 attester
+    ) public view returns (bool) {
+        (bytes32 cType, bytes32 attesterUser) = 
+            request.requestMetadata(requestHash);
+        return (attester == attesterUser);
     }
 }

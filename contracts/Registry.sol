@@ -7,6 +7,7 @@ contract Registry is Ownable {
     enum SettingsValueTypes {
         NONE,
         UINT,
+        UINT32,
         STRING,
         ADDRESS,
         BYTES,
@@ -62,6 +63,14 @@ contract Registry is Ownable {
     {
         uintProperties[_propertyName] = _value;
         emit ChangeProperty(_propertyName, uint256(SettingsValueTypes.UINT));
+    }
+
+    function setUint32Property(bytes32 _propertyName, uint32 _value)
+        public
+        onlyOwner
+    {
+        uint32Properties[_propertyName] = _value;
+        emit ChangeProperty(_propertyName, uint256(SettingsValueTypes.UINT32));
     }
 
     function setStringProperty(bytes32 _propertyName, string memory _value)
