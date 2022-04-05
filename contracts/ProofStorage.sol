@@ -35,15 +35,11 @@ contract ProofStorage is Context, AuthControl, Properties {
         bytes32 programHash,
         string fieldName,
         string proofCid,
+        bytes32 requestHash,
         bytes32 rootHash,
         bool expectResult
     );
-    event AddVerification(
-        address dataOwner,
-        address worker,
-        bytes32 rootHash,
-        bool isPassed
-    );
+
     event AttesterApproved(bytes32 attester);
 
     constructor(IRegistry _registry) {
@@ -194,6 +190,7 @@ contract ProofStorage is Context, AuthControl, Properties {
             _programHash,
             _fieldName,
             _proofCid,
+            _requestHash,
             _rootHash,
             _expResult
         );

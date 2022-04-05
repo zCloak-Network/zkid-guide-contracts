@@ -47,6 +47,9 @@ module.exports = {
   },
 
   networks: {
+    local: {
+      url: "http://127.0.0.1:7545"
+    },
     kovan: {
       url: `https://kovan.infura.io/v3/4e9ee595de8f47c7b9997ce895cf6694`,
       accounts: [privateKeyKovan]
