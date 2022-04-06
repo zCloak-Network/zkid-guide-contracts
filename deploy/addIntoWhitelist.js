@@ -5,15 +5,17 @@
 ///
 const { ethers } = require("hardhat");
 
-const addressWhitelist = "CONTRACT_WHITELIST_ADDRESS";
+// aggregator auth
+const addressWhitelist = "0xd860C6c510bC1477487dfc0E089A5f8EC6D2B53E";
+const woker = "0xBcc35D913aeC9063D6E3b6dB4c359Fa24F7EE14C";
 
 async function main() {
-    const Whitelist = await ethers.getContractFactory("Whitelist");
+    const Whitelist = await ethers.getContractFactory("SimpleAggregatorAuth");
     const whitelist = await Whitelist.attach(addressWhitelist);
 
-    const txAddWoker1 = await whitelist.addWorker("YOUR_ACCOUNT_ADDRESS");
+    const txAddWoker1 = await whitelist.addWorker(woker);
     await txAddWoker1.wait();
-    console.log("Are you worker? ", await whitelist.isWorker("YOUR_ACCOUNT_ADDRESS"));
+    console.log("Are you worker? ", await whitelist.isWorker(woker));
     // you can add other characters as worker
 }
 

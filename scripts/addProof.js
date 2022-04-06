@@ -13,7 +13,7 @@ let kiltAccountOther = ethers.utils.formatBytes32String("kiltAccountOther");
 
 const { kiltAddress, cType, fieldName, programHash, proofCid, rootHash, expectResult } = require("./variable.js");
 const proofStorage = {
-    address: 'CONTRACT_PROOFSTORAGE_ADDRESS'
+    address: '0xe9fa9A2163073bE7d8FD8E6C58aEF472B7dF4FE8'
 }
 
 async function main() {

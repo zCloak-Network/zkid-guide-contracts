@@ -55,6 +55,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
 
     // To record the keepers' historical activities
     // kepper => requestHash => outputHash
+    // TODO: add useraddr
     mapping(address => mapping(bytes32 => bytes32)) keeperSubmissions;
 
     event Verifying(
@@ -201,5 +202,9 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         (bytes32 cType, bytes32 attesterUser) = 
             request.requestMetadata(requestHash);
         return (attester == attesterUser);
+    }
+
+    function hasSubmitted(address _keeper, bytes32 _requestHash) public view returns (bool) {
+        return keeperSubmissions[_keeper][_requestHash] != bytes32(0);
     }
 }
