@@ -36,7 +36,6 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
 
     // registry where we query global settings
     IRegistry public registry;
-    IRequest public request;
 
     // config
     // user => requestHash => minSubmissionRequirement
@@ -69,7 +68,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
 
     constructor(address _registry, address _request) {
         registry = IRegistry(_registry);
-        request = IRequest(_request);
+
     }
 
     function submit(
@@ -95,7 +94,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
 
         // judge user's attester whether the atterster which keeper requests to kilt or not
         require(
-            judgeAttester(_requestHash, _attester),
+            judgeAttester(_requestHash, _cType, _attester),
             "Err: this attester does not match one which provided by user"
         );
 
@@ -196,12 +195,14 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
     }
 
     function judgeAttester(
-        bytes32 requestHash,
-        bytes32 attester
+        bytes32 _requestHash,
+        bytes32 _cType,
+        bytes32 _attester
     ) public view returns (bool) {
-        (bytes32 cType, bytes32 attesterUser) = 
-            request.requestMetadata(requestHash);
-        return (attester == attesterUser);
+        IRequest request = IRequest(registry.addressOf(Properties.CONTRACT_REQUEST));
+        (bytes32 cType, bytes32 attester) = 
+            request.requestMetadata(_requestHash);
+        return ((_attester == attester) && (_cType == cType));
     }
 
     function hasSubmitted(address _keeper, bytes32 _requestHash) public view returns (bool) {
