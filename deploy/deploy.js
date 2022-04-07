@@ -71,7 +71,7 @@ async function main() {
         },
         owner
     );
-    let sAggregator = await SAggregator.deploy(registry.address, rac.address);
+    let sAggregator = await SAggregator.deploy(registry.address);
     await sAggregator.deployed();
 
     // basic conditions

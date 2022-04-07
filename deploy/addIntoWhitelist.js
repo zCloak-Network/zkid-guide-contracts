@@ -6,12 +6,13 @@
 const { ethers } = require("hardhat");
 
 // aggregator auth
-const addressWhitelist = "0xd860C6c510bC1477487dfc0E089A5f8EC6D2B53E";
-const woker = "0xBcc35D913aeC9063D6E3b6dB4c359Fa24F7EE14C";
+const {simpleAggregatorAuthAddr} = require("../scripts/variable.js");
+
+const woker = "0xdB0B665D36E3b68D77B72D0eC3B8349863C48218";
 
 async function main() {
     const Whitelist = await ethers.getContractFactory("SimpleAggregatorAuth");
-    const whitelist = await Whitelist.attach(addressWhitelist);
+    const whitelist = await Whitelist.attach(simpleAggregatorAuthAddr);
 
     const txAddWoker1 = await whitelist.addWorker(woker);
     await txAddWoker1.wait();
