@@ -13,7 +13,7 @@ contract MockSimpleAggregator is SimpleAggregator {
     constructor(
         address _registry,
         address _request
-    ) SimpleAggregator(_registry, _request) {}
+    ) SimpleAggregator(_registry) {}
 
     function getMinSubmission(
         address user,

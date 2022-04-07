@@ -6,13 +6,13 @@
 ///
 const { ethers } = require("hardhat");
 
-let attester = ethers.utils.formatBytes32String("attester");
+
 let newAttester = ethers.utils.formatBytes32String('newAttester');
 let kiltAccount = ethers.utils.formatBytes32String("kiltAccount");
 let kiltAccountOther = ethers.utils.formatBytes32String("kiltAccountOther");
 
 const { addrProofStorage } = require("./contract.json");
-const { cType, fieldName, programHash, proofCid, rootHash, expectResult } = require("./variable.js");
+const { attesterAccount, cType, fieldName, programHash, proofCid, rootHash, expectResult } = require("./variable.js");
 
 async function main() {
     // create contract intance
@@ -21,11 +21,9 @@ async function main() {
     const proof = ProofStorage.attach(addrProofStorage);
 
     // user add proof
-    console.log(`${user1.address} attempting addProof...`);
-    const txAddProof = await proof.addProof(kiltAccount, attester, cType, fieldName, programHash, proofCid, rootHash, expectResult);
+    const txAddProof = await proof.addProof(kiltAccount, attesterAccount, cType, fieldName, programHash, proofCid, rootHash, expectResult);
     await txAddProof.wait();
     console.log("SUCCESS: add proof");
-    console.log(`Transaction hash: ${txAddProof.hash}`);
 }
 
 main()

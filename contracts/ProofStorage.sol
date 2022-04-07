@@ -66,10 +66,10 @@ contract ProofStorage is Context, AuthControl, Properties {
         bool _expResult
     ) public {
         // kilt acount can not be bound repeatedly
-        require(
-            kiltAddr2Addr[_kiltAccount] == address(0),
-            "Kilt Account Already bounded."
-        );
+        // require(
+        //     kiltAddr2Addr[_kiltAccount] == address(0),
+        //     "Kilt Account Already bounded."
+        // );
         // query request status
         IRequest request = IRequest(
             registry.addressOf(Properties.CONTRACT_REQUEST)
