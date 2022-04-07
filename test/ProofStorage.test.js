@@ -151,7 +151,9 @@ describe("ProofStorage contract", function () {
     });
 
     describe("User update proof", function () {
-        it("Should success if same user update another proof", async function () {
+        it("Should success if same user update a new proof", async function () {
+            let rHash = await rac.getRequestHash(cType, fieldName, programHash, expectResult, attester);
+
             // user add a proof first
             await proof.connect(user1).addProof(
                 kiltAccount,
@@ -164,10 +166,27 @@ describe("ProofStorage contract", function () {
                 expectResult
             );
 
-            // TODO: so, what proof do u want to update :) ?
-            let tx = await proof.connect(user1).update_proof(
+            await proof.connect(user1).update_proof(
                 kiltAccount,
-                newAttester,
+                attester,
+                cType,
+                fieldName,
+                programHash,
+                newProofCid,
+                rootHash,
+                expectResult
+            );
+            expect(await proof.proofs(user1.address, rHash)).to.equal(newProofCid);
+
+        });
+
+        it("Should success if same user uses another kiltAccount to update a new proof", async function () {
+            let rHash = await rac.getRequestHash(cType, fieldName, programHash, expectResult, attester);
+
+            // user add a proof first
+            await proof.connect(user1).addProof(
+                kiltAccount,
+                attester,
                 cType,
                 fieldName,
                 programHash,
@@ -176,7 +195,18 @@ describe("ProofStorage contract", function () {
                 expectResult
             );
 
-            
+            await proof.connect(user1).update_proof(
+                kiltAccountOther,
+                attester,
+                cType,
+                fieldName,
+                programHash,
+                newProofCid,
+                rootHash,
+                expectResult
+            );
+            expect(await proof.kiltAddr2Addr(kiltAccountOther)).to.equal(user1.address);
+            expect(await proof.proofs(user1.address, rHash)).to.equal(newProofCid);
         });
     });
 
