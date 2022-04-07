@@ -94,7 +94,7 @@ describe("SimpleAggregator Contract", function () {
                 Bytes32sUtils: bytes32sUtils.address,
             },
         }, owner);
-        mockSAggregator = await MockSAggregator.deploy(registry.address, rac.address);
+        mockSAggregator = await MockSAggregator.deploy(registry.address);
         await mockSAggregator.deployed();
 
         // AuthControl setting

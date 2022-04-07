@@ -11,8 +11,7 @@ contract MockSimpleAggregator is SimpleAggregator {
     using Bytes32sUtils for Bytes32sUtils.Bytes32List;
 
     constructor(
-        address _registry,
-        address _request
+        address _registry
     ) SimpleAggregator(_registry) {}
 
     function getMinSubmission(
