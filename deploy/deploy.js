@@ -3,6 +3,7 @@
 /// @dev This is a deploy script, you can run this script to deploy all contract.
 /// Also, this script can help you initialize some useful things.
 ///
+const fs = require("fs");
 const { ethers } = require("hardhat");
 
 async function main() {
@@ -74,6 +75,24 @@ async function main() {
     let sAggregator = await SAggregator.deploy(registry.address, rac.address);
     await sAggregator.deployed();
 
+    // output result to JSON file
+    const obj = {
+        addrRegistry: registry.address,
+        addrProperties: property.address,
+        addrAddressesUtils: addressesUtils.address,
+        addrBytes32sUtils: bytes32sUtils.address,
+        addrProofStorage: proof.address,
+        addrRAC: rac.address,
+        addrRACAuth: racAuth.address,
+        addrReputationAuth: reputationAuth.address,
+        addrSAggregatorAuth: sAggregatorAuth.address,
+        addrReputation: reputation.address,
+        addrSAggregator: sAggregator.address
+    }
+
+    const content = JSON.stringify(obj, null, 4);
+    fs.writeFileSync('../scripts/contract.json', content);
+
     // basic conditions
     // AuthControl setting
     console.log('\tAuthority control setting...\n');
@@ -88,8 +107,7 @@ async function main() {
 
     // Registry setting
     console.log('\tRegistry setting...\n');
-    // TODO: threshold is n:)?
-    let txThreshold = await registry.setUint32Property(property.UINT32_THRESHOLD(), 1);
+    let txThreshold = await registry.setUint32Property(property.UINT32_THRESHOLD(), 2);
     await txThreshold.wait();
 
     let txRequest = await registry.setAddressProperty(property.CONTRACT_REQUEST(), rac.address);
