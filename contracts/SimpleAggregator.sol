@@ -66,7 +66,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
     );
     event Canonical(address cOwner, bytes32 requestHash, bool isPassed);
 
-    constructor(address _registry, address _request) {
+    constructor(address _registry) {
         registry = IRegistry(_registry);
 
     }
@@ -207,5 +207,11 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
 
     function hasSubmitted(address _keeper, bytes32 _requestHash) public view returns (bool) {
         return keeperSubmissions[_keeper][_requestHash] != bytes32(0);
+    }
+
+    // true - the task is finished
+    // false - not finished, keeper still can submit result
+    function isFinished(address _cOwner, bytes32 _requestHash) public view returns (bool) {
+        return zkCredential[_cOwner][_requestHash].agreeAt != 0;
     }
 }
