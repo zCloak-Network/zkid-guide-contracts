@@ -179,7 +179,7 @@ describe('Reputation Contract', function () {
         );
 
         const data = ethers.utils.hexZeroPad(user.address, 32) + requestHash.replace('0x', '');
-        // project transfer 10 MTKAs to RAC
+        // project recharge 10 MTKAs to reward pool
         await MTKA.connect(project)['transferAndCall(address,uint256,bytes)'](
             rac.address,
             ethers.utils.parseEther('10.0'),
