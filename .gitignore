@@ -14,7 +14,7 @@ package-lock.json
 contract.json
 !contract.json/
 token.json
-!token.json
+!token.json/
 
 ## Others
 TODO.md
