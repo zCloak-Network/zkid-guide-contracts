@@ -3,23 +3,23 @@ pragma solidity ^0.8.0;
 
 interface IRequest {
 
+    struct RequestDetail {
+        bytes32 cType;
+        string fieldName;
+        bytes32 programHash;
+        uint128[] expResult;
+        bytes32 attester;
+    }
+
     function initializeRequest(
-        bytes32 cType,
-        string calldata fieldName,
-        bytes32 programHash,
-        bool expResult,
-        bytes32 attester
+        RequestDetail calldata _requestDetail
     ) external;
 
     // if a requestHash has been initialized
     function exists(bytes32 requestHash) external view returns (bool);
 
     function getRequestHash(
-        bytes32 cType,
-        string calldata fieldName,
-        bytes32 programHash,
-        bool expResult,
-        bytes32 attester
+        RequestDetail calldata _requestDetail
     ) external returns (bytes32);
 
     // return (cType, expResult, attester)

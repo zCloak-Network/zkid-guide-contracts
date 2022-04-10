@@ -53,9 +53,8 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
     mapping(bytes32 => address) did;
 
     // To record the keepers' historical activities
-    // kepper => requestHash => outputHash
-    // TODO: add useraddr
-    mapping(address => mapping(bytes32 => bytes32)) keeperSubmissions;
+    // kepper => userAddress => requestHash => outputHash
+    mapping(address => mapping(address => mapping(bytes32 => bytes32))) keeperSubmissions;
 
     event Verifying(
         address cOwner,
@@ -68,7 +67,6 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
 
     constructor(address _registry) {
         registry = IRegistry(_registry);
-
     }
 
     function submit(
@@ -82,7 +80,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         // one keeper can only submit once for same request task
         bytes32 outputHash = getOutputHash(_rootHash, _verifyRes, _attester);
         require(
-            keeperSubmissions[_msgSender()][_requestHash] == bytes32(0),
+            hasSubmitted(_msgSender(), _cOwner, outputHash),
             "Err: keeper can only submit once to the same request task"
         );
 
@@ -105,7 +103,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         }
 
         // record keeper's submission
-        keeperSubmissions[_msgSender()][_requestHash] = outputHash;
+        keeperSubmissions[_msgSender()][_cOwner][_requestHash] = outputHash;
 
         // modify vote
         Vote storage vote = votes[_cOwner][_requestHash][outputHash];
@@ -114,7 +112,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
 
         // add outputHash
         if (!outputHashes[_cOwner][_requestHash].exists(outputHash)) {
-            outputHashes[_cOwner][_requestHash]._push(outputHash); 
+            outputHashes[_cOwner][_requestHash]._push(outputHash);
         }
 
         // reward keeper
@@ -199,19 +197,30 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         bytes32 _cType,
         bytes32 _attester
     ) public view returns (bool) {
-        IRequest request = IRequest(registry.addressOf(Properties.CONTRACT_REQUEST));
-        (bytes32 cType, bytes32 attester) = 
-            request.requestMetadata(_requestHash);
+        IRequest request = IRequest(
+            registry.addressOf(Properties.CONTRACT_REQUEST)
+        );
+        (bytes32 cType, bytes32 attester) = request.requestMetadata(
+            _requestHash
+        );
         return ((_attester == attester) && (_cType == cType));
     }
 
-    function hasSubmitted(address _keeper, bytes32 _requestHash) public view returns (bool) {
-        return keeperSubmissions[_keeper][_requestHash] != bytes32(0);
+    function hasSubmitted(
+        address _keeper,
+        address _cOwner,
+        bytes32 _requestHash
+    ) public view returns (bool) {
+        return keeperSubmissions[_keeper][_cOwner][_requestHash] != bytes32(0);
     }
 
     // true - the task is finished
     // false - not finished, keeper still can submit result
-    function isFinished(address _cOwner, bytes32 _requestHash) public view returns (bool) {
+    function isFinished(address _cOwner, bytes32 _requestHash)
+        public
+        view
+        returns (bool)
+    {
         return zkCredential[_cOwner][_requestHash].agreeAt != 0;
     }
 }

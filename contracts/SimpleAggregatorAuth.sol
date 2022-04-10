@@ -39,13 +39,14 @@ contract SimpleAggregatorAuth is IAuthority, Properties, Ownable {
         bytes4 _sig
     ) public view override returns (bool) {
         if (isWorker[_src]) {
-            return
-                (_sig == SimpleAggregator.submit.selector);
+            return (_sig == SimpleAggregator.submit.selector);
         }
 
         address readGateway = registry.addressOf(
             Properties.CONTRACT_READ_GATEWAY
         );
-        return (_src == readGateway) && (_sig == SimpleAggregator.isValid.selector);
+        return
+            (_src == readGateway) &&
+            (_sig == SimpleAggregator.isValid.selector);
     }
 }

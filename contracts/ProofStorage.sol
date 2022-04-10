@@ -36,11 +36,15 @@ contract ProofStorage is Context, AuthControl, Properties {
         string fieldName,
         string proofCid,
         bytes32 requestHash,
-        bytes32 rootHash,
-        bool expectResult
+        uint128[] expectResult
     );
 
-    event AttesterApproved(bytes32 attester);
+    event UpdateProof(
+        address dataOwner,
+        bytes32 kiltAccount,
+        bytes32 requestHash,
+        string proofCid
+    );
 
     constructor(IRegistry _registry) {
         registry = _registry;
@@ -62,74 +66,55 @@ contract ProofStorage is Context, AuthControl, Properties {
         string calldata _fieldName,
         bytes32 _programHash,
         string calldata _proofCid,
-        bytes32 _rootHash,
-        bool _expResult
+        uint128[] calldata _expResult // includes rootHash
     ) public {
-        // kilt acount can not be bound repeatedly
-        // require(
-        //     kiltAddr2Addr[_kiltAccount] == address(0),
-        //     "Kilt Account Already bounded."
-        // );
         // query request status
         IRequest request = IRequest(
             registry.addressOf(Properties.CONTRACT_REQUEST)
         );
-        bytes32 requestHash = keccak256(
-            abi.encodePacked(
-                _cType,
-                _fieldName,
-                _programHash,
-                _expResult,
-                _attester
-            )
-        );
-        // request.getRequestHash(_cType, _fieldName, _programHash, _expResult, _attester);
+
+        IRequest.RequestDetail memory d = IRequest.RequestDetail({
+            cType: _cType,
+            fieldName: _fieldName,
+            programHash: _programHash,
+            expResult: _expResult,
+            attester: _attester
+        });
+
+        bytes32 requestHash = request.getRequestHash(d);
 
         require(
             !single_proof_exists(_msgSender(), requestHash),
             "Your proof has already existed, do not add same proof again"
         );
-        _addProof(
+
+        // add requethash metadata
+        if (!request.exists(requestHash)) {
+            request.initializeRequest(d);
+        }
+
+        _addProof(_msgSender(), _kiltAccount, _proofCid, requestHash);
+
+        emit AddProof(
             _msgSender(),
             _kiltAccount,
             _attester,
             _cType,
-            _fieldName,
             _programHash,
+            _fieldName,
             _proofCid,
-            _rootHash,
-            _expResult,
             requestHash,
-            request
+            _expResult
         );
     }
 
-    // TODO: change the validity in aggregator contract if the proofcid has
-    // been updated.
     function update_proof(
         bytes32 _kiltAccount,
-        bytes32 _attester,
-        bytes32 _cType,
-        string calldata _fieldName,
-        bytes32 _programHash,
-        string calldata _proofCid,
-        bytes32 _rootHash,
-        bool _expResult
+        bytes32 _requestHash,
+        string calldata _proofCid
     ) public {
-        IRequest request = IRequest(
-            registry.addressOf(Properties.CONTRACT_REQUEST)
-        );
-        bytes32 requestHash = keccak256(
-            abi.encodePacked(
-                _cType,
-                _fieldName,
-                _programHash,
-                _expResult,
-                _attester
-            )
-        );
         require(
-            single_proof_exists(_msgSender(), requestHash),
+            single_proof_exists(_msgSender(), _requestHash),
             "Your haven't add your proof before, please add it first"
         );
         address boundedAddr = kiltAddr2Addr[_kiltAccount];
@@ -138,61 +123,22 @@ contract ProofStorage is Context, AuthControl, Properties {
             boundedAddr == _msgSender() || boundedAddr == address(0),
             "Kilt Address already Bounded"
         );
-        _addProof(
-            _msgSender(),
-            _kiltAccount,
-            _attester,
-            _cType,
-            _fieldName,
-            _programHash,
-            _proofCid,
-            _rootHash,
-            _expResult,
-            requestHash,
-            request
-        );
+
+        _addProof(_msgSender(), _kiltAccount, _proofCid, _requestHash);
+
+        emit UpdateProof(_msgSender(), _kiltAccount, _requestHash, _proofCid);
     }
 
     function _addProof(
         address _user,
         bytes32 _kiltAccount,
-        bytes32 _attester,
-        bytes32 _cType,
-        string memory _fieldName,
-        bytes32 _programHash,
         string memory _proofCid,
-        bytes32 _rootHash, //TODO: any need to store roothash as part of the onchain kyc info?
-        bool _expResult,
-        bytes32 _requestHash,
-        IRequest _request
+        bytes32 _requestHash
     ) internal {
-        if (!_request.exists(_requestHash)) {
-            _request.initializeRequest(
-                _cType,
-                _fieldName,
-                _programHash,
-                _expResult,
-                _attester
-            );
-        }
-
         // bind to kilt account
         kiltAddr2Addr[_kiltAccount] = _user;
 
         // add proofCid to proofs
         proofs[_user][_requestHash] = _proofCid;
-
-        emit AddProof(
-            _user,
-            _kiltAccount,
-            _attester,
-            _cType,
-            _programHash,
-            _fieldName,
-            _proofCid,
-            _requestHash,
-            _rootHash,
-            _expResult
-        );
     }
 }
