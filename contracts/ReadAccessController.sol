@@ -101,7 +101,6 @@ contract ReadAccessController is
                 _requestDetail.cType,
                 _requestDetail.fieldName,
                 _requestDetail.programHash,
-                _requestDetail.expResult,
                 _requestDetail.attester
             )
         );
@@ -128,27 +127,27 @@ contract ReadAccessController is
     }
 
     // read data from aggregator
-    function isValid(address _who, bytes32 _requestHash)
+    function zkID(address _who, bytes32 _requestHash)
         external
         view
         override
         accessAllowed(_msgSender(), _requestHash)
-        returns (bool)
+        returns (bool, uint128[] memory)
     {
         IChecker aggregator = IChecker(
             registry.addressOf(Properties.CONTRACT_AGGREGATOR)
         );
-        return aggregator.isValid(_who, _requestHash);
+        return aggregator.zkID(_who, _requestHash);
     }
 
     function requestMetadata(bytes32 _requestHash)
         public
         view
         override
-        returns (bytes32 cType, bytes32 attester)
+        returns (RequestDetail memory metadata)
     {
         RequestDetail storage request = requestInfo[_requestHash];
-        return (request.cType, request.attester);
+        return (request);
     }
 
     // project will use `transferFromAndCall(user, rac, amount, data)` or `transferAndCall(rac, amount, data)`
@@ -186,7 +185,8 @@ contract ReadAccessController is
         // _data must be requestHash
         require(IERC1363(tokenExp).transferAndCall(rewardPool, _amount, _data));
 
-        bool res = this.isValid(cOwner, requestHash);
+        (bool res, uint128[] memory calcOutput) = this.zkID(cOwner, requestHash);
+        // todo: modify this!
         // charge if the user is verified true
         if (res) {
             return IERC1363Receiver(this).onTransferReceived.selector;

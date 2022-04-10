@@ -47,6 +47,6 @@ contract SimpleAggregatorAuth is IAuthority, Properties, Ownable {
         );
         return
             (_src == readGateway) &&
-            (_sig == SimpleAggregator.isValid.selector);
+            (_sig == SimpleAggregator.zkID.selector);
     }
 }

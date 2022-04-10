@@ -54,6 +54,6 @@ contract AggregatorAuth is Ownable, IAuthority, Properties {
         address readGateway = registry.addressOf(
             Properties.CONTRACT_READ_GATEWAY
         );
-        return (_src == readGateway) && (_sig == IChecker.isValid.selector);
+        return (_src == readGateway) && (_sig == IChecker.zkID.selector);
     }
 }

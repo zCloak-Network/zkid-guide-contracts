@@ -7,7 +7,6 @@ interface IRequest {
         bytes32 cType;
         string fieldName;
         bytes32 programHash;
-        uint128[] expResult;
         bytes32 attester;
     }
 
@@ -23,5 +22,5 @@ interface IRequest {
     ) external returns (bytes32);
 
     // return (cType, expResult, attester)
-    function requestMetadata(bytes32 _requestHash) external view returns (bytes32, bytes32);
+    function requestMetadata(bytes32 _requestHash) external view returns (RequestDetail memory);
 }

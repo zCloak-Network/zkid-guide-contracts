@@ -4,6 +4,8 @@
 /// Every user can only add proof once
 /// @notice test network: Moonbase Alpha
 ///
+const { BigNumber } = require("ethers");
+const BN = require("bn.js");
 const { ethers } = require("hardhat");
 
 
@@ -21,8 +23,12 @@ async function main() {
     const ProofStorage = await ethers.getContractFactory("ProofStorage", user1);
     const proof = ProofStorage.attach(proofStorageAddr);
 
+    console.log("exp result length is", expectResult.length)
+
+    let convertExpResult = expectResult.map( item => {return new BN(item)});
+
     // user add proof
-    const txAddProof = await proof.addProof(kiltAccount, attesterAccount, cType, fieldName, programHash, proofCid, rootHash, expectResult);
+    const txAddProof = await proof.addProof(kiltAccount, attesterAccount, cType, fieldName, programHash, proofCid, convertExpResult);
     await txAddProof.wait();
     console.log("SUCCESS: add proof");
 }

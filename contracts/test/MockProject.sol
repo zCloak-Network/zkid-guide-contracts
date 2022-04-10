@@ -11,7 +11,7 @@ contract MockProject {
         checker = IChecker(_checker);
     }
 
-    function isValid(address _who, bytes32 _requestHash) external view returns (bool) {
-        return checker.isValid(_who, _requestHash);
-    }
+    // function isValid(address _who, bytes32 _requestHash) external view returns (bool) {
+    //     return checker.zkID(_who, _requestHash);
+    // }
 }

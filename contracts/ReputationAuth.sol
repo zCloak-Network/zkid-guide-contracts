@@ -14,7 +14,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract ReputationAuth is Ownable, IAuthority, Properties {
     IRegistry registry;
-·
+
     event AddWorker(address worker);
 
     constructor(address _registry) {

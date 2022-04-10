@@ -32,6 +32,15 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         bool isPassed;
         // when to reach the final result
         uint256 agreeAt;
+        // outputHash,
+        bytes32 outputHash;
+    }
+
+    struct Output {
+        bytes32 rootHash;
+        uint128[] calcOutput;
+        bool isPassed;
+        bytes32 attester;
     }
 
     // registry where we query global settings
@@ -56,6 +65,9 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
     // kepper => userAddress => requestHash => outputHash
     mapping(address => mapping(address => mapping(bytes32 => bytes32))) keeperSubmissions;
 
+    // outputHash => Output
+    mapping(bytes32 => Output) outputs;
+
     event Verifying(
         address cOwner,
         bytes32 requestHash,
@@ -75,12 +87,18 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         bytes32 _cType,
         bytes32 _rootHash,
         bool _verifyRes,
-        bytes32 _attester
+        bytes32 _attester,
+        uint128[] memory _calcOutput
     ) public auth {
         // one keeper can only submit once for same request task
-        bytes32 outputHash = getOutputHash(_rootHash, _verifyRes, _attester);
+        bytes32 outputHash = getOutputHash(
+            _rootHash,
+            _calcOutput,
+            _verifyRes,
+            _attester
+        );
         require(
-            hasSubmitted(_msgSender(), _cOwner, outputHash),
+            !hasSubmitted(_msgSender(), _cOwner, _requestHash),
             "Err: keeper can only submit once to the same request task"
         );
 
@@ -90,10 +108,10 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
             "Err: Request task has already been finished"
         );
 
-        // judge user's attester whether the atterster which keeper requests to kilt or not
+        // check user's attestation whether the atterster which keeper requests to kilt or not
         require(
-            judgeAttester(_requestHash, _cType, _attester),
-            "Err: this attester does not match one which provided by user"
+            checkAttestation(_requestHash, _cType, _attester),
+            "Err: this attestation does not match one which provided by user"
         );
 
         // initialize the min submission requirement
@@ -144,6 +162,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
     ) internal {
         zkCredential[_cOwner][_requestHash].isPassed = _verifyRes;
         zkCredential[_cOwner][_requestHash].agreeAt = block.timestamp;
+        zkCredential[_cOwner][_requestHash].outputHash = _outputHash;
 
         // modify did
         // TODO: how to manage rootHash update?
@@ -175,35 +194,40 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         emit Canonical(_cOwner, _requestHash, _verifyRes);
     }
 
-    function isValid(address _who, bytes32 _requestHash)
+    function zkID(address _who, bytes32 _requestHash)
         public
         view
         override
-        returns (bool)
+        returns (bool isPassed, uint128[] memory calcOutput)
     {
-        return zkCredential[_who][_requestHash].isPassed;
+        bytes32 outputHash = zkCredential[_who][_requestHash].outputHash;
+        calcOutput = outputs[outputHash].calcOutput;
+        isPassed = zkCredential[_who][_requestHash].isPassed;
     }
 
+    // todo: make the parameter to be a struct
     function getOutputHash(
         bytes32 _rootHash,
+        uint128[] memory _calcOutput,
         bool _isPassed,
         bytes32 _attester
     ) public pure returns (bytes32 oHash) {
-        oHash = keccak256(abi.encodePacked(_rootHash, _isPassed, _attester));
+        oHash = keccak256(
+            abi.encodePacked(_rootHash, _calcOutput, _isPassed, _attester)
+        );
     }
 
-    function judgeAttester(
+    function checkAttestation(
         bytes32 _requestHash,
-        bytes32 _cType,
-        bytes32 _attester
+        bytes32 _cType, // fetched from kilt
+        bytes32 _attester // fetched from kilt
     ) public view returns (bool) {
         IRequest request = IRequest(
             registry.addressOf(Properties.CONTRACT_REQUEST)
         );
-        (bytes32 cType, bytes32 attester) = request.requestMetadata(
-            _requestHash
-        );
-        return ((_attester == attester) && (_cType == cType));
+        IRequest.RequestDetail memory d = request.requestMetadata(_requestHash);
+
+        return ((_attester == d.attester) && (_cType == d.cType));
     }
 
     function hasSubmitted(
