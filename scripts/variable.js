@@ -5,12 +5,12 @@ let programHash = "0x8acf8f36dbd0407ced227c97f9f1bcf989c6affd32231ad56a36e9dfcd4
 let proofCid = "QmUn4UfXdv7uJXerqy1PMfnXxYuM3xfpUC8pFZaVyJoN7H";
 let rootHash = "0xaf6e8c774b0f7409743f7e28e29fd3196d0eee72c66e57c550302abea4336933";
 let kiltAddress = "0xf85edd58bd7de60dac41894c508a1522f86d4b1066e3a4cbea3ab0353e659d57";
-let expectResult = [233188900905525016821424478072392897305,144963380003482941727464471945825970483,1];
+let expectResult = [1];
 let attesterAccount = "0x4cfd2e722b370b1015343a27c9789815d803fdb1840aaa0406a26be55a95ff01"
 let isPassed = true;
-let proofStorageAddr = "0x9b6B600ecf96e7b089C694C475fC5b0fEa0ad787"
-let simpleAggregatorAuthAddr = "0x37FD487abFA2b4Dfc31dcfD4e5a51F4938a0DeB6"
-let simpleAggregatorAddr = "0x9A5eb09C8A48D51Ab5AEdbDB6838159C125C2695"
+let proofStorageAddr = "0x2d1A8e7A8300C030407AeCbe4120DF9523CB1EeC"
+let simpleAggregatorAuthAddr = "0x69C34b841721798aD451CdE5A291EAf7E54f0f62"
+let simpleAggregatorAddr = "0x56C73736754B28daDE6ad75512CA000D8CfD145a"
 
 module.exports = {
     // data
