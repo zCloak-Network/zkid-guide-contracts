@@ -198,11 +198,12 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         public
         view
         override
-        returns (bool isPassed, uint128[] memory calcOutput)
+        returns (bool, uint128[] memory)
     {
         bytes32 outputHash = zkCredential[_who][_requestHash].outputHash;
-        calcOutput = outputs[outputHash].calcOutput;
-        isPassed = zkCredential[_who][_requestHash].isPassed;
+        uint128[] memory calcOutput = outputs[outputHash].calcOutput;
+        bool isPassed = zkCredential[_who][_requestHash].isPassed;
+        return (isPassed, calcOutput);
     }
 
     // todo: make the parameter to be a struct
