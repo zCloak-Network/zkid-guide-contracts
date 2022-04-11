@@ -9,7 +9,7 @@ import "./interfaces/IAuthority.sol";
 contract RACAuth is Properties, IAuthority {
     IRegistry public registry;
 
-    constructor (address _registry){
+    constructor(address _registry) {
         registry = IRegistry(_registry);
     }
 
@@ -19,7 +19,11 @@ contract RACAuth is Properties, IAuthority {
         address _dst,
         bytes4 _sig
     ) public view override returns (bool) {
-        address proofStorage = registry.addressOf(Properties.CONTRACT_MAIN_KILT);
-        return (_src == proofStorage) && (_sig == ReadAccessController.initializeRequest.selector);
+        address proofStorage = registry.addressOf(
+            Properties.CONTRACT_MAIN_KILT
+        );
+        return
+            (_src == proofStorage) &&
+            (_sig == ReadAccessController.initializeRequest.selector);
     }
 }

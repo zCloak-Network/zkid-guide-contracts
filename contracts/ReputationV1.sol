@@ -16,7 +16,14 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
  * @title record the reputation point for worker and reward pool
  */
 
-contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC1363Receiver, IReputation {
+contract Reputation is
+    Context,
+    ReentrancyGuard,
+    Properties,
+    AuthControl,
+    IERC1363Receiver,
+    IReputation
+{
     int128 constant PUNISH = -2;
     int128 constant REWARD = 1;
     uint256 constant POINT = 1;
@@ -144,7 +151,7 @@ contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC13
         address _claimer,
         uint256 _withdraw,
         IndividualReputation storage _individualR
-    ) nonReentrant internal returns (bool) {
+    ) internal nonReentrant returns (bool) {
         _individualR.claimedAmount[_token] += _withdraw;
         IERC1363(_token).transfer(_claimer, _withdraw);
 
@@ -228,7 +235,9 @@ contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC13
         AddressesUtils.Addresses storage tokens = payments[_requestHash];
 
         if (tokens.length() > 0) {
-            int128 communtiyR = communityReputations[_requestHash][_msgSender()];
+            int128 communtiyR = communityReputations[_requestHash][
+                _msgSender()
+            ];
             individuals[_requestHash][_msgSender()]
                 .individualReputation += communtiyR;
             communityReputations[_requestHash][_msgSender()] = 0;
@@ -252,7 +261,7 @@ contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC13
             // wrong sender
             return bytes4(0);
         }
-        
+
         bytes32 requestHash;
         assembly {
             let ptr := mload(0x40)
@@ -260,9 +269,10 @@ contract Reputation is Context, ReentrancyGuard, Properties, AuthControl, IERC13
             requestHash := mload(add(ptr, 0xc4))
         }
 
-        (bool res, uint256 rPool) = rewardPool[requestHash][_msgSender()].tryAdd(_amount);
+        (bool res, uint256 rPool) = rewardPool[requestHash][_msgSender()]
+            .tryAdd(_amount);
         rewardPool[requestHash][_msgSender()] += rPool;
-    
+
         return IERC1363Receiver(this).onTransferReceived.selector;
         // TODO: add event
     }

@@ -32,6 +32,15 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         bool isPassed;
         // when to reach the final result
         uint256 agreeAt;
+        // outputHash,
+        bytes32 outputHash;
+    }
+
+    struct Output {
+        bytes32 rootHash;
+        uint128[] calcOutput;
+        bool isPassed;
+        bytes32 attester;
     }
 
     // registry where we query global settings
@@ -53,9 +62,11 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
     mapping(bytes32 => address) did;
 
     // To record the keepers' historical activities
-    // kepper => requestHash => outputHash
-    // TODO: add useraddr
-    mapping(address => mapping(bytes32 => bytes32)) keeperSubmissions;
+    // kepper => userAddress => requestHash => outputHash
+    mapping(address => mapping(address => mapping(bytes32 => bytes32))) keeperSubmissions;
+
+    // outputHash => Output
+    mapping(bytes32 => Output) outputs;
 
     event Verifying(
         address cOwner,
@@ -68,7 +79,6 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
 
     constructor(address _registry) {
         registry = IRegistry(_registry);
-
     }
 
     function submit(
@@ -77,12 +87,18 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         bytes32 _cType,
         bytes32 _rootHash,
         bool _verifyRes,
-        bytes32 _attester
+        bytes32 _attester,
+        uint128[] memory _calcOutput
     ) public auth {
         // one keeper can only submit once for same request task
-        bytes32 outputHash = getOutputHash(_rootHash, _verifyRes, _attester);
+        bytes32 outputHash = getOutputHash(
+            _rootHash,
+            _calcOutput,
+            _verifyRes,
+            _attester
+        );
         require(
-            keeperSubmissions[_msgSender()][_requestHash] == bytes32(0),
+            !hasSubmitted(_msgSender(), _cOwner, _requestHash),
             "Err: keeper can only submit once to the same request task"
         );
 
@@ -92,10 +108,10 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
             "Err: Request task has already been finished"
         );
 
-        // judge user's attester whether the atterster which keeper requests to kilt or not
+        // check user's attestation whether the atterster which keeper requests to kilt or not
         require(
-            judgeAttester(_requestHash, _cType, _attester),
-            "Err: this attester does not match one which provided by user"
+            checkAttestation(_requestHash, _cType, _attester),
+            "Err: this attestation does not match one which provided by user"
         );
 
         // initialize the min submission requirement
@@ -105,7 +121,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         }
 
         // record keeper's submission
-        keeperSubmissions[_msgSender()][_requestHash] = outputHash;
+        keeperSubmissions[_msgSender()][_cOwner][_requestHash] = outputHash;
 
         // modify vote
         Vote storage vote = votes[_cOwner][_requestHash][outputHash];
@@ -114,7 +130,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
 
         // add outputHash
         if (!outputHashes[_cOwner][_requestHash].exists(outputHash)) {
-            outputHashes[_cOwner][_requestHash]._push(outputHash); 
+            outputHashes[_cOwner][_requestHash]._push(outputHash);
         }
 
         // reward keeper
@@ -146,6 +162,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
     ) internal {
         zkCredential[_cOwner][_requestHash].isPassed = _verifyRes;
         zkCredential[_cOwner][_requestHash].agreeAt = block.timestamp;
+        zkCredential[_cOwner][_requestHash].outputHash = _outputHash;
 
         // modify did
         // TODO: how to manage rootHash update?
@@ -177,41 +194,57 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         emit Canonical(_cOwner, _requestHash, _verifyRes);
     }
 
-    function isValid(address _who, bytes32 _requestHash)
+    function zkID(address _who, bytes32 _requestHash)
         public
         view
         override
-        returns (bool)
+        returns (bool isPassed, uint128[] memory calcOutput)
     {
-        return zkCredential[_who][_requestHash].isPassed;
+        bytes32 outputHash = zkCredential[_who][_requestHash].outputHash;
+        calcOutput = outputs[outputHash].calcOutput;
+        isPassed = zkCredential[_who][_requestHash].isPassed;
     }
 
+    // todo: make the parameter to be a struct
     function getOutputHash(
         bytes32 _rootHash,
+        uint128[] memory _calcOutput,
         bool _isPassed,
         bytes32 _attester
     ) public pure returns (bytes32 oHash) {
-        oHash = keccak256(abi.encodePacked(_rootHash, _isPassed, _attester));
+        oHash = keccak256(
+            abi.encodePacked(_rootHash, _calcOutput, _isPassed, _attester)
+        );
     }
 
-    function judgeAttester(
+    function checkAttestation(
         bytes32 _requestHash,
-        bytes32 _cType,
-        bytes32 _attester
+        bytes32 _cType, // fetched from kilt
+        bytes32 _attester // fetched from kilt
     ) public view returns (bool) {
-        IRequest request = IRequest(registry.addressOf(Properties.CONTRACT_REQUEST));
-        (bytes32 cType, bytes32 attester) = 
-            request.requestMetadata(_requestHash);
-        return ((_attester == attester) && (_cType == cType));
+        IRequest request = IRequest(
+            registry.addressOf(Properties.CONTRACT_REQUEST)
+        );
+        IRequest.RequestDetail memory d = request.requestMetadata(_requestHash);
+
+        return ((_attester == d.attester) && (_cType == d.cType));
     }
 
-    function hasSubmitted(address _keeper, bytes32 _requestHash) public view returns (bool) {
-        return keeperSubmissions[_keeper][_requestHash] != bytes32(0);
+    function hasSubmitted(
+        address _keeper,
+        address _cOwner,
+        bytes32 _requestHash
+    ) public view returns (bool) {
+        return keeperSubmissions[_keeper][_cOwner][_requestHash] != bytes32(0);
     }
 
     // true - the task is finished
     // false - not finished, keeper still can submit result
-    function isFinished(address _cOwner, bytes32 _requestHash) public view returns (bool) {
+    function isFinished(address _cOwner, bytes32 _requestHash)
+        public
+        view
+        returns (bool)
+    {
         return zkCredential[_cOwner][_requestHash].agreeAt != 0;
     }
 }

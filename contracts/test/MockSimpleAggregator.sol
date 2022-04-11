@@ -23,9 +23,10 @@ contract MockSimpleAggregator is SimpleAggregator {
 
     function getKeeperSubmissions(
         address keeper,
+        address cOwner,
         bytes32 requestHash
     ) public view returns (bytes32) {
-        return keeperSubmissions[keeper][requestHash];
+        return keeperSubmissions[keeper][cOwner][requestHash];
     }
 
     function getVoterAddress(

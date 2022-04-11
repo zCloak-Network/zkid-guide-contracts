@@ -12,13 +12,14 @@ import "./utils/AddressesUtils.sol";
 import "./utils/Bytes32sUtils.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 
+// TODO: Update!
 /**
  * @title the commit/reaveal aggregator.
  * Where zCloak-worker submit the verification result
  * @notice each node worker will commit the hash first and
  * then reveal the answer later.
  */
-contract CRAggregator is Context, Properties, AuthControl, IChecker, ICRVerify {
+contract CRAggregator is Context, Properties, AuthControl, ICRVerify {
     using AddressesUtils for AddressesUtils.Addresses;
     using Bytes32sUtils for Bytes32sUtils.Bytes32List;
 
@@ -176,9 +177,10 @@ contract CRAggregator is Context, Properties, AuthControl, IChecker, ICRVerify {
             IRequest request = IRequest(
                 registry.addressOf(Properties.CONTRACT_REQUEST)
             );
-            (bytes32 cType, bytes32 attester) = request.requestMetadata(
+            IRequest.RequestDetail memory d = request.requestMetadata(
                 _requestHash
             );
+            (bytes32 cType, bytes32 attester) = (d.cType, d.attester);
 
             require(
                 (_cType == cType) && (_attester == attester),
@@ -274,14 +276,14 @@ contract CRAggregator is Context, Properties, AuthControl, IChecker, ICRVerify {
         emit Canonical(_cOwner, _requestHash, _verifyRes);
     }
 
-    function isValid(address _who, bytes32 _requestHash)
-        external
-        view
-        override
-        returns (bool)
-    {
-        return zkCredential[_who][_requestHash].isPassed;
-    }
+    // function isValid(address _who, bytes32 _requestHash)
+    //     external
+    //     view
+    //     override
+    //     returns (bool)
+    // {
+    //     return zkCredential[_who][_requestHash].isPassed;
+    // }
 
     function getOutputHash(
         bytes32 _rootHash,

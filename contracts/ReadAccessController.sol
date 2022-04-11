@@ -32,14 +32,6 @@ contract ReadAccessController is
 
     IRegistry public registry;
 
-    struct RequestDetail {
-        bytes32 cType;
-        string fieldName;
-        bytes32 programHash;
-        bool expResult;
-        bytes32 attester;
-    }
-
     struct Meter {
         uint256 perVisitFee;
         // using native token like ETH if token is address(0)
@@ -48,7 +40,7 @@ contract ReadAccessController is
     }
 
     // requestHash => RequestDetail
-    mapping(bytes32 => RequestDetail) public requestInfo;
+    mapping(bytes32 => IRequest.RequestDetail) public requestInfo;
     // requestHash => project => meter
     mapping(bytes32 => mapping(address => Meter)) public applied;
 
@@ -68,20 +60,8 @@ contract ReadAccessController is
     }
 
     // TODO: revoked by owner and KiltProofV1
-    function initializeRequest(
-        bytes32 _cType,
-        string calldata _fieldName,
-        bytes32 _programHash,
-        bool _expResult,
-        bytes32 _attester
-    ) external override auth {
-        bytes32 requestHash = getRequestHash(
-            _cType,
-            _fieldName,
-            _programHash,
-            _expResult,
-            _attester
-        );
+    function initializeRequest(RequestDetail memory _d) external override auth {
+        bytes32 requestHash = getRequestHash(_d);
         // must be the first time to add info
         require(
             requestInfo[requestHash].cType == bytes32(0),
@@ -90,12 +70,7 @@ contract ReadAccessController is
 
         // start to initlaize
         // modify request
-        RequestDetail storage request = requestInfo[requestHash];
-        request.cType = _cType;
-        request.fieldName = _fieldName;
-        request.programHash = _programHash;
-        request.expResult = _expResult;
-        request.attester = _attester;
+        requestInfo[requestHash] = _d;
         // TODO: add event
     }
 
@@ -111,24 +86,22 @@ contract ReadAccessController is
         // TODO: add event
     }
 
-    function superAuth(address _internal, bool granted) onlyOwner public {
+    function superAuth(address _internal, bool granted) public onlyOwner {
         superior[_internal] = granted;
     }
 
-    function getRequestHash(
-        bytes32 _cType,
-        string calldata _fieldName,
-        bytes32 _programHash,
-        bool _expResult,
-        bytes32 _attester
-    ) public pure override returns (bytes32 rHash) {
+    function getRequestHash(RequestDetail memory _requestDetail)
+        public
+        pure
+        override
+        returns (bytes32 rHash)
+    {
         rHash = keccak256(
             abi.encodePacked(
-                _cType,
-                _fieldName,
-                _programHash,
-                _expResult,
-                _attester
+                _requestDetail.cType,
+                _requestDetail.fieldName,
+                _requestDetail.programHash,
+                _requestDetail.attester
             )
         );
     }
@@ -146,34 +119,35 @@ contract ReadAccessController is
     modifier accessAllowed(address _caller, bytes32 _requestHash) {
         require(
             applied[_requestHash][_caller].perVisitFee != 0 ||
-                superior[_caller] || _caller == address(this),
+                superior[_caller] ||
+                _caller == address(this),
             "No Access"
         );
         _;
     }
 
     // read data from aggregator
-    function isValid(address _who, bytes32 _requestHash)
+    function zkID(address _who, bytes32 _requestHash)
         external
         view
         override
         accessAllowed(_msgSender(), _requestHash)
-        returns (bool)
+        returns (bool, uint128[] memory)
     {
         IChecker aggregator = IChecker(
             registry.addressOf(Properties.CONTRACT_AGGREGATOR)
         );
-        return aggregator.isValid(_who, _requestHash);
+        return aggregator.zkID(_who, _requestHash);
     }
 
     function requestMetadata(bytes32 _requestHash)
         public
         view
         override
-        returns (bytes32 cType, bytes32 attester)
+        returns (RequestDetail memory metadata)
     {
         RequestDetail storage request = requestInfo[_requestHash];
-        return (request.cType, request.attester);
+        return (request);
     }
 
     // project will use `transferFromAndCall(user, rac, amount, data)` or `transferAndCall(rac, amount, data)`
@@ -211,7 +185,8 @@ contract ReadAccessController is
         // _data must be requestHash
         require(IERC1363(tokenExp).transferAndCall(rewardPool, _amount, _data));
 
-        bool res = this.isValid(cOwner, requestHash);
+        (bool res, uint128[] memory calcOutput) = this.zkID(cOwner, requestHash);
+        // todo: modify this!
         // charge if the user is verified true
         if (res) {
             return IERC1363Receiver(this).onTransferReceived.selector;
