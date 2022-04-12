@@ -38,6 +38,9 @@ describe("SimpleAggregator Contract", function () {
     let keeper4;
     let keeper5;
 
+    let rHash;
+    let oHash;
+
     beforeEach(async function () {
         [owner, user1, keeper1, keeper2, keeper3, keeper4, keeper5] = await ethers.getSigners();
         let keepers = [keeper1.address, keeper2.address, keeper3.address, keeper4.address, keeper5.address];
@@ -120,16 +123,16 @@ describe("SimpleAggregator Contract", function () {
             rootHash,
             expectResult
         );
+
+        rHash = await rac.getRequestHash({cType: cType, fieldName: fieldName, programHash: programHash, attester: attester});
+        oHash = await mockSAggregator.getOutputHash(rootHash, expectResult, isPassed_t, attester);
     });
 
     describe("keeper submit verification result", function () {
         it("should success if keeper submit verification result(one keeper)", async function () {
-            let rHash = await rac.getRequestHash(cType, fieldName, programHash, expectResult, attester);
-            let oHash = await mockSAggregator.getOutputHash(rootHash, isPassed_t, attester);
-
             // check storage value
-            let tx = await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
-            assert(await mockSAggregator.getKeeperSubmissions(keeper1.address, rHash), oHash);
+            let tx = await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
+            assert(await mockSAggregator.getKeeperSubmissions(keeper1.address, user1.address, rHash), oHash);
             assert(await mockSAggregator.getVoterAddress(user1.address, rHash, oHash, 0), keeper1.address);
             assert(await mockSAggregator.getVoterIndex(user1.address, rHash, oHash, keeper1.address), 0);
             assert(await mockSAggregator.getVoteCount(user1.address, rHash, oHash), 1);
@@ -140,6 +143,8 @@ describe("SimpleAggregator Contract", function () {
             expect((await mockReputation.getCReputations(rHash, keeper1.address)).toNumber())
                 .to.equal(1);
             expect((await mockReputation.getKeeperTotalReputations(keeper1.address)).toNumber())
+                .to.equal(1);
+            expect((await mockReputation.getTotalPoints(rHash)).toNumber())
                 .to.equal(1);
 
             // should emit 'Reward' event
@@ -154,18 +159,17 @@ describe("SimpleAggregator Contract", function () {
         });
 
         it("should success if multi-keeper add verification result", async function () {
-            let rHash = await rac.getRequestHash(cType, fieldName, programHash, expectResult, attester);
-
             // verification result is false
-            await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_f, attester);
-            await mockSAggregator.connect(keeper2).submit(user1.address, rHash, cType, rootHash, isPassed_f, attester);
-            // // verification result is true
-            await mockSAggregator.connect(keeper3).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
-            await mockSAggregator.connect(keeper4).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
-            await mockSAggregator.connect(keeper5).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
+            await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_f, attester, expectResult);
+            await mockSAggregator.connect(keeper2).submit(user1.address, rHash, cType, rootHash, isPassed_f, attester, expectResult);
+            // verification result is true
+            await mockSAggregator.connect(keeper3).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
+            await mockSAggregator.connect(keeper4).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
+            await mockSAggregator.connect(keeper5).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
 
             // check the storage
             expect(await mockSAggregator.getFinalResult(user1.address, rHash)).to.equal(isPassed_t);
+            expect(await mockSAggregator.getFinalOHash(user1.address, rHash)).to.equal(oHash);
             expect(await mockSAggregator.getDid(rootHash)).to.equal(user1.address);
             expect((await mockReputation.getKeeperTotalReputations(keeper1.address)).toNumber()).to.equal(-1);
             expect((await mockReputation.getKeeperTotalReputations(keeper2.address)).toNumber()).to.equal(-1);
@@ -173,32 +177,29 @@ describe("SimpleAggregator Contract", function () {
         });
 
         it("Should stop submit if verification result has up to THRESHOLD", async function () {
-            let rHash = await rac.getRequestHash(cType, fieldName, programHash, expectResult, attester);
             // THRESHOLD is 3
-            await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
-            await mockSAggregator.connect(keeper2).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
-            await mockSAggregator.connect(keeper3).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
+            await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
+            await mockSAggregator.connect(keeper2).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
+            await mockSAggregator.connect(keeper3).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
 
-            await expect(mockSAggregator.connect(keeper4).submit(user1.address, rHash, cType, rootHash, isPassed_f, attester))
+            await expect(mockSAggregator.connect(keeper4).submit(user1.address, rHash, cType, rootHash, isPassed_f, attester, expectResult))
                 .to.be.revertedWith("Err: Request task has already been finished");
 
-            await expect(mockSAggregator.connect(keeper5).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester))
+            await expect(mockSAggregator.connect(keeper5).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult))
                 .to.be.revertedWith("Err: Request task has already been finished");
         });
 
         it("Should revert if keeper submit twice for the same request task", async function () {
-            let rHash = await rac.getRequestHash(cType, fieldName, programHash, expectResult, attester);
-            await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester);
+            await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
 
-            await expect(mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester))
+            await expect(mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult))
                 .to.be.revertedWith("Err: keeper can only submit once to the same request task");
         });
 
         it("Should revert if user use fake attester(keeper is loyal)", async function () {
-            let rHash = await rac.getRequestHash(cType, fieldName, programHash, expectResult, attester);
             let kiltAttester = ethers.utils.formatBytes32String("true_attester");
-            await expect(mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_f, kiltAttester))
-                .to.be.revertedWith("Err: this attester does not match one which provided by user");
+            await expect(mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_f, kiltAttester, expectResult))
+                .to.be.revertedWith("Err: this attestation does not match one which provided by user");
         });
     });
 });

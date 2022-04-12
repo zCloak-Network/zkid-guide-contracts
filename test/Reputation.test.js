@@ -151,13 +151,12 @@ describe('Reputation Contract', function () {
 
         // keeper add token in payments
         tokens = [MTKA.address, MTKB.address];
-        requestHash = await rac.getRequestHash(
-            cType,
-            fieldName,
-            programHash,
-            expectResult,
-            attester
-        );
+        requestHash = await rac.getRequestHash({
+            cType: cType,
+            fieldName, fieldName,
+            programHash, programHash,
+            attester: attester
+        });
         txAdd = await mockReputation.connect(keeper1).batchAdd(requestHash, tokens);
 
         // keeper submit verification result
@@ -167,7 +166,8 @@ describe('Reputation Contract', function () {
             cType,
             rootHash,
             isPassed_t,
-            attester
+            attester,
+            expectResult
         );
 
         // set meter
