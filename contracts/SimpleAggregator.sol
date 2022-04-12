@@ -72,10 +72,12 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         address cOwner,
         bytes32 requestHash,
         address worker,
+        bytes32 outputHash,
         bytes32 attester,
-        bool isPassed
+        bool isPassed,
+        uint128[] calcResult
     );
-    event Canonical(address cOwner, bytes32 requestHash, bool isPassed);
+    event Canonical(address cOwner, bytes32 requestHash, bytes32 outputHash);
 
     constructor(address _registry) {
         registry = IRegistry(_registry);
@@ -139,6 +141,8 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         );
         reputation.reward(_requestHash, _msgSender());
 
+        emit Verifying(_cOwner, _requestHash, _msgSender(), outputHash, _attester, _verifyRes, _calcOutput);
+
         if (vote.voteCount >= minSubmission[_cOwner][_requestHash]) {
             // reach the final result
             _agree(
@@ -191,7 +195,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
             }
         }
 
-        emit Canonical(_cOwner, _requestHash, _verifyRes);
+        emit Canonical(_cOwner, _requestHash, _outputHash);
     }
 
     function zkID(address _who, bytes32 _requestHash)
