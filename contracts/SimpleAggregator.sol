@@ -73,6 +73,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         bytes32 requestHash,
         address worker,
         bytes32 outputHash,
+        bytes32 rootHash,
         bytes32 attester,
         bool isPassed,
         uint128[] calcResult
@@ -141,7 +142,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         );
         reputation.reward(_requestHash, _msgSender());
 
-        emit Verifying(_cOwner, _requestHash, _msgSender(), outputHash, _attester, _verifyRes, _calcOutput);
+        emit Verifying(_cOwner, _requestHash, _msgSender(), outputHash, _rootHash, _attester, _verifyRes, _calcOutput);
 
         if (vote.voteCount >= minSubmission[_cOwner][_requestHash]) {
             // reach the final result
