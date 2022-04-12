@@ -88,6 +88,14 @@ contract MockSimpleAggregator is SimpleAggregator {
         return finalRes.agreeAt;
     }
 
+    function getFinalOHash(
+        address user,
+        bytes32 requestHash
+    ) public view returns (bytes32) {
+        Final storage finalRes = zkCredential[user][requestHash];
+        return finalRes.outputHash;
+    }
+
     function getDid(
         bytes32 rootHash
     ) public view returns (address) {

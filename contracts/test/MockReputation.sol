@@ -57,4 +57,12 @@ contract MockReputation is Reputation {
         AddressesUtils.Addresses storage token = payments[requestHash];
         return token.element(index);
     }
+
+    function getTotalPoints(bytes32 requestHash)
+        public
+        view
+        returns (uint256)
+    {
+        return totalPoints[requestHash];
+    }
 }
