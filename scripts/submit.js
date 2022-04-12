@@ -48,22 +48,27 @@ async function main() {
     );
     const sAggregator = SAggregator.attach(addrSAggregator);
 
-    let rHash = await rac.getRequestHash(cType, fieldName, programHash, expectResult, attesterAccount);
+    let rHash = await rac.getRequestHash({
+        cType: cType,
+        fieldName: fieldName,
+        programHash: programHash,
+        attester: attesterAccount
+    });
 
-    const txKeeper1Submit = await sAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, false, attesterAccount);
+    const txKeeper1Submit = await sAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, false, attesterAccount, expectResult);
     await txKeeper1Submit.wait();
     console.log(`keepre1 submit tx hash: ${txKeeper1Submit.hash}`);
-    console.log("keeper1 has submitted verification? ", await sAggregator.hasSubmitted(keeper1.address, rHash));
+    console.log("keeper1 has submitted verification? ", await sAggregator.hasSubmitted(keeper1.address, user1.address, rHash));
 
-    const txKeeper2Submit = await sAggregator.connect(keeper2).submit(user1.address, rHash, cType, rootHash, true, attesterAccount);
+    const txKeeper2Submit = await sAggregator.connect(keeper2).submit(user1.address, rHash, cType, rootHash, true, attesterAccount, expectResult);
     await txKeeper2Submit.wait();
     console.log(`keepre2 submit tx hash: ${txKeeper2Submit.hash}`);
-    console.log("keeper2 has submitted verification? ", await sAggregator.hasSubmitted(keeper2.address, rHash));
+    console.log("keeper2 has submitted verification? ", await sAggregator.hasSubmitted(keeper2.address, user1.address, rHash));
 
-    const txKeeper3Submit = await sAggregator.connect(keeper3).submit(user1.address, rHash, cType, rootHash, true, attesterAccount);
+    const txKeeper3Submit = await sAggregator.connect(keeper3).submit(user1.address, rHash, cType, rootHash, true, attesterAccount, expectResult);
     await txKeeper3Submit.wait();
     console.log(`keepre3 submit tx hash: ${txKeeper2Submit.hash}`);
-    console.log("keeper3 has submitted verification? ", await sAggregator.hasSubmitted(keeper3.address, rHash));
+    console.log("keeper3 has submitted verification? ", await sAggregator.hasSubmitted(keeper3.address, user1.address, rHash));
 
 }
 

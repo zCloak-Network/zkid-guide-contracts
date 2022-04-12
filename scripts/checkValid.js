@@ -1,7 +1,6 @@
 const { ethers } = require("hardhat");
 
 const { attesterAccount, cType, fieldName, programHash, expectResult } = require("./variable.js");
-let attester = ethers.utils.formatBytes32String("attester");
 const {
     addrRAC,
     addrSAggregator,
@@ -29,9 +28,15 @@ async function main() {
     const RAC = await ethers.getContractFactory("ReadAccessController", project);
     const rac = RAC.attach(addrRAC);
 
-    let rHash = await rac.getRequestHash(cType, fieldName, programHash, expectResult, attesterAccount);
+    let rHash = await rac.getRequestHash({
+        cType: cType,
+        fieldName: fieldName,
+        programHash: programHash,
+        attester: attesterAccount
+    });
 
-    console.log(`proof wether valid or not? ${await sAggregator.isValid(user1.address, rHash)}`);
+    // TODO: isValid is changed, check it
+    console.log(`task wether finished or not? ${await sAggregator.isFinished(user1.address, rHash)}`);
 }
 
 main()
