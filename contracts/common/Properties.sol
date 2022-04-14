@@ -23,7 +23,10 @@ contract Properties {
     bytes32 public constant CONTRACT_AGGREGATOR = "CONTRACT_AGGREGATOR";
     // address of contract which is in charge of the read access to user's onchain kyc
     // v0.1.0 - ReadAccessController
-    bytes32 public constant CONTRACT_READ_GATEWAY = "CONTRACT_READ_GATEWAY"; 
+    bytes32 public constant CONTRACT_READ_GATEWAY = "CONTRACT_READ_GATEWAY";
+    // where to find the nft address
+    // v0.1.0 - PoapFactory
+    bytes32 public constant CONTRACT_POAP_FACTORY = "CONTRACT_POAP_FACTORY";
 
 
     /**
