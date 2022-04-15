@@ -39,7 +39,7 @@ describe("ProofStorage contract", function () {
         const Registry = await ethers.getContractFactory("Registry", owner);
         const Properties = await ethers.getContractFactory("Properties", owner);
         const ProofStorage = await ethers.getContractFactory("MockProofStorage", owner);
-        const RAC = await ethers.getContractFactory("ReadAccessController", owner);
+        const RAC = await ethers.getContractFactory("MockRAC", owner);
         const RACAuth = await ethers.getContractFactory("RACAuth", owner);
 
         registry = await Registry.deploy();
@@ -68,8 +68,6 @@ describe("ProofStorage contract", function () {
         rHashOther = await rac.getRequestHash({cType: cType, fieldName: fieldName, programHash: newProgramHash, attester: newAttester});
     });
     
-    // TODO: all test sample need check fatProofs struct variable
-    // TODO: How amazing proof.calcResult.length is 2 after addProof!!(see ProofStorage contract todo)
     describe("Check value", function () {
         it("RAC should be registried as CONTRACT_REQUESET", async function () {
             expect(await registry.addressOf(properties.CONTRACT_REQUEST()))
@@ -86,7 +84,7 @@ describe("ProofStorage contract", function () {
         it("user1 can add proof successfully", async function () {
             // storage should be non-empty
             expect((await rac.requestInfo(rHash)).cType).to.equal(blankBytes32);
-            expect((await rac.requestInfo(rHash)).fieldName).to.equal('');
+            expect((await rac.requestInfo(rHash)).fieldName).to.equal(undefined);
             expect((await rac.requestInfo(rHash)).programHash).to.equal(blankBytes32);
             expect((await rac.requestInfo(rHash)).attester).to.equal(blankBytes32);
 
@@ -123,7 +121,7 @@ describe("ProofStorage contract", function () {
 
             // check the storage
             assert((await rac.requestInfo(rHash)).cType, cType);
-            assert((await rac.requestInfo(rHash)).fieldName, fieldName);
+            assert((await rac.getFieldName(rHash))[0], fieldName[0]);
             assert((await rac.requestInfo(rHash)).programHash, programHash);
             assert((await rac.requestInfo(rHash)).attester, attester);
 
@@ -238,7 +236,7 @@ describe("ProofStorage contract", function () {
 
             // check user1's proof storage
             assert((await rac.requestInfo(rHash)).cType, cType);
-            assert((await rac.requestInfo(rHash)).fieldName, fieldName);
+            assert((await rac.getFieldName(rHash))[0], fieldName[0]);
             assert((await rac.requestInfo(rHash)).programHash, programHash);
             assert((await rac.requestInfo(rHash)).attester, attester);
 
@@ -248,7 +246,7 @@ describe("ProofStorage contract", function () {
 
             // check user2's proof storage
             assert((await rac.requestInfo(rHashOther)).cType, cType);
-            assert((await rac.requestInfo(rHashOther)).fieldName, fieldName);
+            assert((await rac.getFieldName(rHashOther))[0], fieldName[0]);
             assert((await rac.requestInfo(rHashOther)).programHash, newProgramHash);
             assert((await rac.requestInfo(rHashOther)).attester, attester);
 

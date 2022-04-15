@@ -137,6 +137,21 @@ describe('Reputation Contract', function () {
         await registry.setAddressProperty(property.CONTRACT_REWARD(), mockReputation.address);
         await registry.setAddressProperty(property.CONTRACT_READ_GATEWAY(), rac.address);
 
+        requestHash = await rac.getRequestHash({
+            cType: cType,
+            fieldName: fieldName,
+            programHash: programHash,
+            attester: attester
+        });
+
+        // set meter
+        await rac.connect(owner).applyRequest(
+            requestHash,
+            project.address,
+            MTKA.address,
+            ethers.utils.parseEther('2.0')
+        );
+
         // user1 add proof first
         await proof.connect(user).addProof(
             kiltAccount,
@@ -151,12 +166,6 @@ describe('Reputation Contract', function () {
 
         // keeper add token in payments
         tokens = [MTKA.address, MTKB.address];
-        requestHash = await rac.getRequestHash({
-            cType: cType,
-            fieldName: fieldName,
-            programHash: programHash,
-            attester: attester
-        });
         txAdd = await mockReputation.connect(keeper1).batchAdd(requestHash, tokens);
 
         // keeper submit verification result
@@ -168,14 +177,6 @@ describe('Reputation Contract', function () {
             isPassed_t,
             attester,
             expectResult
-        );
-
-        // set meter
-        await rac.connect(owner).applyRequest(
-            requestHash,
-            project.address,
-            MTKA.address,
-            ethers.utils.parseEther('2.0')
         );
 
         const data = ethers.utils.hexZeroPad(user.address, 32) + requestHash.replace('0x', '');
@@ -213,5 +214,4 @@ describe('Reputation Contract', function () {
         });
     });
 
-    // TODO: add other things:)?
 });
