@@ -31,10 +31,10 @@ contract PoapFactory is Ownable, IFactory {
     }
 
 
-    function newPoap(bytes32 _requestHash, string memory _uri) public {
+    function newPoap(bytes32 _requestHash, string memory _uri, IRegistry _registry) public {
         require(rh2poaps[_requestHash] == address(0), "already created");
 
-        address poapAddr = address(new ZCloakPoap(_uri));
+        address poapAddr = address(new ZCloakPoap(_uri, address(_registry)));
 
         rh2poaps[_requestHash]= poapAddr;
         poap2rhs[poapAddr] = _requestHash;
