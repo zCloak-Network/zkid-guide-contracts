@@ -152,7 +152,8 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
                 _verifyRes,
                 _rootHash,
                 reputation,
-                outputHash
+                outputHash,
+                _calcOutput
             );
         }
     }
@@ -163,11 +164,13 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         bool _verifyRes,
         bytes32 _rootHash,
         IReputation _reputation,
-        bytes32 _outputHash
+        bytes32 _outputHash,
+        uint128[] memory _calcOutput
     ) internal {
         zkCredential[_cOwner][_requestHash].isPassed = _verifyRes;
         zkCredential[_cOwner][_requestHash].agreeAt = block.timestamp;
         zkCredential[_cOwner][_requestHash].outputHash = _outputHash;
+        outputs[_outputHash].calcOutput = _calcOutput;
 
         // modify did
         // TODO: how to manage rootHash update?
