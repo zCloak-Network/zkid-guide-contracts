@@ -5,7 +5,7 @@ interface IRequest {
 
     struct RequestDetail {
         bytes32 cType;
-        string fieldName;
+        uint128[] fieldName;
         bytes32 programHash;
         bytes32 attester;
     }

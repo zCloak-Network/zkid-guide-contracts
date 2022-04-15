@@ -38,7 +38,7 @@ contract ProofStorage is Context, AuthControl, Properties {
         bytes32 attester,
         bytes32 cType,
         bytes32 programHash,
-        string fieldName,
+        uint128[] fieldNames,
         string proofCid,
         bytes32 requestHash,
         bytes32 rootHash,
@@ -72,7 +72,7 @@ contract ProofStorage is Context, AuthControl, Properties {
         bytes32 _kiltAccount,
         bytes32 _attester,
         bytes32 _cType,
-        string calldata _fieldName,
+        uint128[] calldata _fieldNames,
         bytes32 _programHash,
         string calldata _proofCid,
         bytes32 _rootHash, // just for notifying keeper
@@ -85,7 +85,7 @@ contract ProofStorage is Context, AuthControl, Properties {
 
         IRequest.RequestDetail memory d = IRequest.RequestDetail({
             cType: _cType,
-            fieldName: _fieldName,
+            fieldName: _fieldNames,
             programHash: _programHash,
             attester: _attester
         });
@@ -115,7 +115,7 @@ contract ProofStorage is Context, AuthControl, Properties {
             _attester,
             _cType,
             _programHash,
-            _fieldName,
+            _fieldNames,
             _proofCid,
             requestHash,
             _rootHash,
