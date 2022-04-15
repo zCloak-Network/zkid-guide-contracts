@@ -11,7 +11,10 @@ artifacts
 package-lock.json
 **/.DS_Store 
 **/secrets.json
-
+contract.json
+!contract.json/
+token.json
+!token.json/
 
 ## Others
 TODO.md

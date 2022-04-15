@@ -1,0 +1,15 @@
+{
+    "addrRegistry": "0xb525748c79ED41C2d9E09156FDDA00F5d549C662",
+    "addrProperties": "0x65B08bfA6f8f1D75704982098e37ee0bfE7248E5",
+    "addrAddressesUtils": "0xB2fc3B4130eD9082bB5A45C3F0124aAA5Ac07dAb",
+    "addrBytes32sUtils": "0xfB5A3560108a25f1087Ee572FEBA3e77B755e16b",
+    "addrProofStorage": "0x8a7D9C0aF1Ed818617399154E91a50BA9c7Bfc2F",
+    "addrRAC": "0xF85C5363CB8550d4f9DCe819f0EcA3963822D73E",
+    "addrRACAuth": "0x4F6Ffb0af73f860Bc059EfD97c9edE2a22c86496",
+    "addrReputationAuth": "0x8bcc6d6de8c92D60768B3E0c822d7C9104d64cB2",
+    "addrSAggregatorAuth": "0x7cf40957c947fef5Aeb9E6eE96b2b686c6b2bF0e",
+    "addrReputation": "0x231Cdd8E7a7B50452A394493d48845bc9b2fdCd6",
+    "addrSAggregator": "0x8Aaa5085FE57468bDfEc04af4dD1788CEaE00DE0",
+    "addrFaucet": "0xD88deCC5a87cA5cc71115878463b14109969d30c",
+    "addrFactory": "0xCf77d0d4FC712DCCd8633CA1732590Eed4DAC06D"
+}
