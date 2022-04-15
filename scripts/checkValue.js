@@ -11,8 +11,9 @@ const {
     addrSAggregator,
     addrAddressesUtils,
     addrBytes32sUtils,
-    addrSAggregatorAuth
-} = require("./contract.json");
+    addrSAggregatorAuth,
+    addrFactory
+} = require("./moon.json");
 
 async function main() {
     // create contract instance
@@ -60,6 +61,7 @@ async function main() {
     console.log(`CONTRACT_AGGREGATOR address: ${await registry.addressOf(properties.CONTRACT_AGGREGATOR())}`);
     console.log(`CONTRACT_REWARD address: ${await registry.addressOf(properties.CONTRACT_REWARD())}`);
     console.log(`CONTRACT_READ_GATEWAY address: ${await registry.addressOf(properties.CONTRACT_READ_GATEWAY())}`);
+    console.log(`CONTRACT_POAP_FACTORY address: ${await registry.addressOf(properties.CONTRACT_POAP_FACTORY())}`);
 
 }
 
