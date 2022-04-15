@@ -1,32 +1,37 @@
 const { ethers } = require("hardhat");
 
-const { addrRAC } = require("./contract.json");
+const { addrRAC, addrReputation, addrAddressesUtils } = require("./contract.json");
 const { addrToken } = require("./token.json");
-const { attesterAccount, cType, fieldName, programHash, proofCid, rootHash, expectResult } = require("./variable.js");
+const { cType, fieldName, programHash, attesterAccount } = require("./variable.js");
 
 async function main() {
     const owner = await ethers.getSigner(0);
     const project = await ethers.getSigner(3);
+
     const RAC = await ethers.getContractFactory('ReadAccessController', owner);
     const rac = RAC.attach(addrRAC);
 
-    let rDetail = {
+    const Reputation = await ethers.getContractFactory(
+        'Reputation',
+        {
+            libraries: {
+                AddressesUtils: addrAddressesUtils
+            }
+        },
+        project
+    );
+    const reputation = Reputation.attach(addrReputation);
+
+    let rHash = await rac.getRequestHash({
         cType: cType,
         fieldName: fieldName,
         programHash: programHash,
         attester: attesterAccount
-    };
-    console.log(rDetail);
-    let rHash = await rac.getRequestHash(rDetail);
-    console.log(rHash);
-    let tx = await rac.applyRequest(
-        rHash,
-        project.address,
-        addrToken,
-        ethers.utils.parseEther('2.0')
-    );
+    });
+    let tx = await reputation.addToken(rHash, addrToken);
     await tx.wait();
-    console.log('SUCCESS: set meter');
+
+    console.log(`SUCCESS: add token`);
 }
 
 main()

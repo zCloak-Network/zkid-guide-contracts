@@ -24,13 +24,12 @@ async function main() {
     const MTK = new ethers.Contract(addrToken, abi, project);
 
     // set variable
-    let rHash = await rac.getRequestHash(
-        cType,
-        fieldName,
-        programHash,
-        expectResult,
-        attesterAccount
-    );
+    let rHash = await rac.getRequestHash({
+        cType: cType,
+        fieldName: fieldName,
+        programHash: programHash,
+        attester: attesterAccount
+    });
     let data = ethers.utils.hexZeroPad(user1.address, 32) + rHash.replace('0x', '');
 
     console.log('1');
@@ -40,8 +39,8 @@ async function main() {
         ethers.utils.parseEther('10.0'),
         data
     );
-    console.log('tx: ', tx);
     await tx.wait();
+    console.log(`Token transfer tx: ${tx}`);
     console.log('SUCCESS: recharge token');
 }
 
