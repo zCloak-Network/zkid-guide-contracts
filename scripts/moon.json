@@ -1,6 +1,6 @@
 {
     "addrRegistry": "0xb525748c79ED41C2d9E09156FDDA00F5d549C662",
-    "addrProperties": "0x65B08bfA6f8f1D75704982098e37ee0bfE7248E5",
+    "addrProperties": "0xe72dBAe236d2bF088f41824Fcd8297f7c3D46a45",
     "addrAddressesUtils": "0xB2fc3B4130eD9082bB5A45C3F0124aAA5Ac07dAb",
     "addrBytes32sUtils": "0xfB5A3560108a25f1087Ee572FEBA3e77B755e16b",
     "addrProofStorage": "0x8a7D9C0aF1Ed818617399154E91a50BA9c7Bfc2F",
@@ -11,5 +11,5 @@
     "addrReputation": "0x231Cdd8E7a7B50452A394493d48845bc9b2fdCd6",
     "addrSAggregator": "0x8Aaa5085FE57468bDfEc04af4dD1788CEaE00DE0",
     "addrFaucet": "0xD88deCC5a87cA5cc71115878463b14109969d30c",
-    "addrFactory": "0xCf77d0d4FC712DCCd8633CA1732590Eed4DAC06D"
+    "addrFactory": "0xAb897f377E14c012A9f0A6f7a57E4Da62e7894CF"
 }
