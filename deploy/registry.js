@@ -3,8 +3,11 @@ const { ethers } = require('hardhat');
 const { 
     addrRegistry,
     addrProperties,
+    addrProofStorage,
     addrFactory
 } = require('../scripts/moon.json')
+
+// const addrProperties = '0xe72dBAe236d2bF088f41824Fcd8297f7c3D46a45';
 
 async function main() {
     const owner = await ethers.getSigner(0);
@@ -17,10 +20,10 @@ async function main() {
 
     // set registry
     console.log('Setting...');
-    let tx = await regisry.setAddressProperty(property.CONTRACT_POAP_FACTORY(), addrFactory);
+    let tx = await regisry.setAddressProperty(property.CONTRACT_MAIN_KILT(), addrProofStorage);
     await tx.wait();
 
-    console.log(`CONTRACT_POAP_FACTORY address: ${await regisry.addressOf(property.CONTRACT_POAP_FACTORY())}`);
+    console.log(`CONTRACT_MAIN_KILT address: ${await regisry.addressOf(property.CONTRACT_MAIN_KILT())}`);
 }
 
 main()

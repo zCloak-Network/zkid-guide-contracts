@@ -25,33 +25,52 @@ async function main() {
     const RACAuth = await ethers.getContractFactory("RACAuth", owner);
     const ReputationAuth = await ethers.getContractFactory("ReputationAuth", owner);
     const SimpleAggregatorAuth = await ethers.getContractFactory("SimpleAggregatorAuth", owner);
+    const Faucet = await ethers.getContractFactory('Faucet', owner);
+    const PoapFactory = await ethers.getContractFactory('PoapFactory', owner);
 
     let registry = await Registry.deploy();
     await registry.deployed();
+    console.log(`Registey: ${registry.address}`);
 
     let property = await Properties.deploy();
     await property.deployed();
+    console.log(`Properties: ${property.address}`);
 
     let addressesUtils = await AddressesUtils.deploy();
     await addressesUtils.deployed();
+    console.log(`AddressesUtils: ${addressesUtils.address}`);
 
     let bytes32sUtils = await Bytes32sUtils.deploy();
     await bytes32sUtils.deployed();
+    console.log(`Bytes32Utils: ${bytes32sUtils.address}`);
 
     let proof = await ProofStorage.deploy(registry.address);
     await proof.deployed();
+    console.log(`ProofStorage: ${proof.address}`);
 
     let rac = await RAC.deploy(registry.address);
     await rac.deployed();
+    console.log(`ReadAccessController: ${rac.address}`);
 
     let racAuth = await RACAuth.deploy(registry.address);
     await racAuth.deployed();
+    console.log(`ReadAccessControllerAuth: ${racAuth.address}`);
 
     let reputationAuth = await ReputationAuth.deploy(registry.address);
     await reputationAuth.deployed();
+    console.log(`ReputationAuth: ${reputationAuth.address}`);
 
     let sAggregatorAuth = await SimpleAggregatorAuth.deploy(keepers, registry.address);
     await sAggregatorAuth.deployed();
+    console.log(`SimpleAggregatorAuth: ${sAggregatorAuth.address}`);
+
+    let faucet = await Faucet.deploy();
+    await faucet.deployed();
+    console.log(`Faucet: ${faucet.address}`);
+
+    let factory = await PoapFactory.deploy(registry.address);
+    await factory.deployed();
+    console.log(`PoapFactory: ${factory.address}`);
 
     // library linking contract
     const Reputation = await ethers.getContractFactory(
@@ -61,6 +80,7 @@ async function main() {
     );
     let reputation = await Reputation.deploy(registry.address);
     await reputation.deployed();
+    console.log(`Reputation: ${reputation.address}`);
 
     const SAggregator = await ethers.getContractFactory(
         "SimpleAggregator",
@@ -74,6 +94,7 @@ async function main() {
     );
     let sAggregator = await SAggregator.deploy(registry.address);
     await sAggregator.deployed();
+    console.log(`SimpleAggregator: ${sAggregator.address}`);
 
     // output result to JSON file
     const obj = {
@@ -87,7 +108,9 @@ async function main() {
         addrReputationAuth: reputationAuth.address,
         addrSAggregatorAuth: sAggregatorAuth.address,
         addrReputation: reputation.address,
-        addrSAggregator: sAggregator.address
+        addrSAggregator: sAggregator.address,
+        addrFaucet: faucet.address,
+        addrFactory: factory.address
     }
 
     const content = JSON.stringify(obj, null, 4);
@@ -127,6 +150,9 @@ async function main() {
 
     let txReadGateway = await registry.setAddressProperty(property.CONTRACT_READ_GATEWAY(), rac.address);
     await txReadGateway.wait();
+
+    let txPoapFactory = await registry.setAddressProperty(property.CONTRACT_POAP_FACTORY(), factory.address);
+    await txPoapFactory.wait();
 
     console.log("\n------------------ SUMMARIZE ------------------\n");
     console.log(`\tContract owner:\n\t${owner.address}\n`);

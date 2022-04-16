@@ -27,11 +27,7 @@ async function main() {
     await faucet.deployed();
 
     let factory = await PoapFactory.deploy(addrRegistry);
-    await factory.deployed(addrRegistry);
-
-    const ProofStorage = await ethers.getContractFactory('ProofStorage', owner);
-    let proof = await ProofStorage.deploy(addrRegistry);
-    await proof.deployed();
+    await factory.deployed();
 
     // attach contract
     const Registry = await ethers.getContractFactory("Registry", owner);
@@ -61,9 +57,7 @@ async function main() {
         addrFactory: factory.address
     }
     const content = JSON.stringify(obj, null, 4);
-    fs.writeFileSync('../scripts/contract.json', content, { flag: 'a+' });
-
-    console.log(`contract ProofStorage address: ${proof.address}`);
+    fs.writeFileSync('../scripts/moon.json', content, { flag: 'a+' });
 
     // Registry setting
     console.log('Registry setting...\n');
