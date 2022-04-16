@@ -256,4 +256,29 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
     {
         return zkCredential[_cOwner][_requestHash].agreeAt != 0;
     }
+
+    // // clear final result and keeper's submission history
+    // function clear(address _cOwner, bytes32 _requestHash) public auth {
+
+    //     // todo: clear zkCredential
+
+    //     // todo: clear keeper history
+
+    //     // handle clear
+    //     Bytes32sUtils.Bytes32List storage outputHashList = outputHashes[
+    //         _cOwner
+    //     ][_requestHash];
+
+    //      for (uint256 i = 0; i < outputHashList.length(); i++) {
+    //         // punsish the malicious keepers
+    //         AddressesUtils.Addresses storage badVoters = votes[_cOwner][
+    //             _requestHash
+    //         ][outputHashList.element(i)].keepers;
+
+    //         for (uint256 j = 0; j < badVoters.length(); j++) {
+    //             _reputation.punish(_requestHash, badVoters.element(j));
+    //             _reputation.reward(_requestHash, _msgSender());
+    //         }
+    //     }
+    // }
 }

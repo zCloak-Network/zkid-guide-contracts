@@ -13,24 +13,26 @@ let newAttester = ethers.utils.formatBytes32String('newAttester');
 let kiltAccount = ethers.utils.formatBytes32String("kiltAccount");
 let kiltAccountOther = ethers.utils.formatBytes32String("kiltAccountOther");
 
-const { addrProofStorage } = require("./contract.json");
+const { addrRAC } = require("./contract.json");
 
 const { attesterAccount, cType, fieldName, programHash, proofCid, rootHash, expectResult, proofStorageAddr } = require("./variable.js");
 
 
 async function main() {
-    // create contract intance
+
+    const lixin = "0x7b627b7991d7364b332e8b48a99178cde5e3be2c";
+    const lixinRH = "0xa47cdbafddcbde5c9f532b3ac52e6e89ba9d98d51517b6875165b76d0e38796f";
+    const owner = await ethers.getSigner(0);
     const user1 = await ethers.getSigner(1);
-    const ProofStorage = await ethers.getContractFactory("ProofStorage", user1);
-    const proof = ProofStorage.attach(addrProofStorage);
-
+       /// remember to give poap the access to rac
+       const RAC = await ethers.getContractFactory('ReadAccessController', owner);
+       const rac = RAC.attach(addrRAC);
+       await rac.superAuth(owner, true);
     // user add proof
-    const txAddProof = await proof.addProof(kiltAccount, attesterAccount, cType, fieldName, programHash, proofCid, rootHash, expectResult);
-    await txAddProof.wait();
-    console.log("SUCCESS: add proof");
+    let (isValid, output) = await rac.zkID(lixin, lixinRH);
+    console.log("isValid", isValid);
 }
-
-main()
+    main()
     .then(() => process.exit(0))
     .catch((error) => {
         console.error(error);

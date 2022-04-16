@@ -56,19 +56,19 @@ contract ZCloakPoap is ERC1155, Pausable, Properties {
         
         // get poapId through outputs
         uint256 poapId = uint256(keccak256(abi.encode(outputs)));
-        uint128 poapIdentifier = uint128(poapId << 128);
+        uint128 poapIdentifier = uint128(poapId >> 128);
 
         // get the pre-minted nft id
         uint256 nftId = getNftId(poapIdentifier);
 
         // check if the user has owned the poap
-        require(balanceOf(who, nftId) == 0, "You have already minted");
+        require(totalBalanceOf[poapIdentifier][who] == 0, "You have already minted");
 
         // mint poap to claimer
         _mint(who, nftId, 1, "");
 
         // increase totalSupply
-        _mintAClass(poapIdentifier);
+        _mintAClass(poapIdentifier, who);
 
         emit MintPoap(poapIdentifier, who, nftId);
     }
@@ -82,9 +82,10 @@ contract ZCloakPoap is ERC1155, Pausable, Properties {
     }
 
 
-    function _mintAClass(uint128 _poapId) internal {
+    function _mintAClass(uint128 _poapId, address _who) internal {
         //todo: use safe Add instead
         totalSupply[_poapId]++;
+        totalBalanceOf[_poapId][_who]++;
         emit MintAClass(_poapId, totalSupply[_poapId]);
     }
 
