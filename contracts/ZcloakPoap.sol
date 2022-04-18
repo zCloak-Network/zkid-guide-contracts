@@ -8,8 +8,9 @@ import "./interfaces/IRegistry.sol";
 import "./interfaces/IFactory.sol";
 import "./interfaces/IChecker.sol";
 import "./common/Properties.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ZCloakPoap is ERC1155, Pausable, Properties {
+contract ZCloakPoap is ERC1155, Pausable, Ownable, Properties {
     using Address for address;
 
     IRegistry public registry;
@@ -102,5 +103,13 @@ contract ZCloakPoap is ERC1155, Pausable, Properties {
         if (_from != address(0)) {
             require(!paused(), "ERC1155Pausable: token transfer while paused");
         }
+    }
+
+    function pause() public onlyOwner {
+        super._pause();
+    }
+
+    function unPause() public onlyOwner {
+        super._unpause();
     }
 }

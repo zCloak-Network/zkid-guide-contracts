@@ -7,8 +7,8 @@ contract Faucet is Context {
 
     mapping(address => uint256) public claimed;
 
-    uint256 constant MAX = 1 ether;
-    uint256 constant CLAIM = 0.5 ether;
+    uint256 constant MAX = 0.4 ether;
+    uint256 constant CLAIM = 0.2 ether;
 
     event Claim(address who, uint256 amount);
 

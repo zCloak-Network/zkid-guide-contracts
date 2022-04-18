@@ -102,7 +102,7 @@ contract Reputation is
     }
 
     // add token as verification reward
-    function addToken(bytes32 _requestHash, address _token) public {
+    function addToken(bytes32 _requestHash, address _token) public onlyOwner {
         AddressesUtils.Addresses storage tokens = payments[_requestHash];
         tokens._push(_token);
         emit Add(_token, _msgSender());

@@ -9,12 +9,14 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/IRegistry.sol";
 import "./interfaces/IRequest.sol";
+import "./interfaces/IAggregator.sol";
 import "./utils/Bytes32sUtils.sol";
 import "./common/Properties.sol";
 import "./common/AuthControl.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
-contract ProofStorage is Context, AuthControl, Properties {
+contract ProofStorage is Context, AuthControl, Properties, Pausable {
     bytes32 public constant NULL = "";
 
     // exclude root hash
@@ -54,6 +56,7 @@ contract ProofStorage is Context, AuthControl, Properties {
 
     constructor(IRegistry _registry) {
         registry = _registry;
+        super._pause();
     }
 
     // check if the proof has been set
@@ -85,7 +88,7 @@ contract ProofStorage is Context, AuthControl, Properties {
 
         IRequest.RequestDetail memory d = IRequest.RequestDetail({
             cType: _cType,
-            fieldName: _fieldNames,
+            fieldNames: _fieldNames,
             programHash: _programHash,
             attester: _attester
         });
@@ -127,8 +130,9 @@ contract ProofStorage is Context, AuthControl, Properties {
         bytes32 _kiltAccount,
         bytes32 _requestHash,
         string calldata _proofCid,
+        bytes32 _rootHash,
         uint128[] memory _expResult
-    ) public {
+    ) whenNotPaused public {
         require(
             single_proof_exists(_msgSender(), _requestHash),
             "Your haven't add your proof before, please add it first"
@@ -141,6 +145,16 @@ contract ProofStorage is Context, AuthControl, Properties {
         //     "Kilt Address already Bounded"
         // );
 
+
+        IRequest request = IRequest(
+            registry.addressOf(Properties.CONTRACT_REQUEST)
+        );
+        // query request metadata
+        IRequest.RequestDetail memory d = request.requestMetadata(_requestHash);
+
+        // it must not be null
+        require(d.cType != bytes32(0), "request hash has not been initialized");
+
         _addProof(
             _msgSender(),
             _kiltAccount,
@@ -149,8 +163,21 @@ contract ProofStorage is Context, AuthControl, Properties {
             _expResult
         );
 
-        // todo: clear verified data, zkcredential
-        emit UpdateProof(_msgSender(), _kiltAccount, _requestHash, _proofCid);
+        IAggregator aggregator = IAggregator(registry.addressOf(Properties.CONTRACT_AGGREGATOR));
+        // clear verified result
+        require(aggregator.clear(_msgSender(), _requestHash));
+
+        emit AddProof(
+            _msgSender(),
+            d.attester,
+            d.cType,
+            d.programHash,
+            d.fieldNames,
+            _proofCid,
+            _requestHash,
+            _rootHash,
+            _expResult
+        );
     }
 
     function _addProof(
@@ -168,7 +195,11 @@ contract ProofStorage is Context, AuthControl, Properties {
         fatProofs[_user][_requestHash].calcResult = _expResult;
     }
 
-    function _clearVerifyResult() internal {
-        
+      function pause() public onlyOwner {
+        super._pause();
+    }
+
+    function unPause() public onlyOwner {
+        super._unpause();
     }
 }

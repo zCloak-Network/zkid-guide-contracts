@@ -9,15 +9,19 @@ const { ethers } = require("hardhat");
 const {addrSAggregatorAuth} = require("../scripts/contract.json");
 
 
-const woker = "0xdB0B665D36E3b68D77B72D0eC3B8349863C48218";
-
 async function main() {
+    // only apply to local status
+    const keeper1 = await ethers.getSigner(3);
+    const keeper2 = await ethers.getSigner(4);
+
     const Whitelist = await ethers.getContractFactory("SimpleAggregatorAuth");
     const whitelist = await Whitelist.attach(addrSAggregatorAuth);
 
-    const txAddWoker1 = await whitelist.addWorker(woker);
-    await txAddWoker1.wait();
-    console.log("Are you worker? ", await whitelist.isWorker(woker));
+    
+    await whitelist.addWorker(keeper1.address);
+    await whitelist.addWorker(keeper2.address)
+    console.log("is keeper1 granted? ", await whitelist.isWorker(keeper1.address));
+    console.log("is keeper2 granted? ", await whitelist.isWorker(keeper2.address));
     // you can add other characters as worker
 }
 

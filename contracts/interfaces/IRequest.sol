@@ -5,7 +5,7 @@ interface IRequest {
 
     struct RequestDetail {
         bytes32 cType;
-        uint128[] fieldName;
+        uint128[] fieldNames;
         bytes32 programHash;
         bytes32 attester;
     }
@@ -21,6 +21,6 @@ interface IRequest {
         RequestDetail calldata _requestDetail
     ) external returns (bytes32);
 
-    // return (cType, expResult, attester)
+    // return request metadata
     function requestMetadata(bytes32 _requestHash) external view returns (RequestDetail memory);
 }

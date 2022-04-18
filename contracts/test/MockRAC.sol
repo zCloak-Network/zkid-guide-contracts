@@ -10,6 +10,6 @@ contract MockRAC is ReadAccessController {
     function getFieldName(
         bytes32 rHash
     ) public view returns (uint128[] memory) {
-        return requestInfo[rHash].fieldName;
+        return requestInfo[rHash].fieldNames;
     }
 }

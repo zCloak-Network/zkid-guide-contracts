@@ -45,8 +45,16 @@ contract SimpleAggregatorAuth is IAuthority, Properties, Ownable {
         address readGateway = registry.addressOf(
             Properties.CONTRACT_READ_GATEWAY
         );
+
+        address proofStorage = registry.addressOf(Properties.CONTRACT_MAIN_KILT);
+
         return
-            (_src == readGateway) &&
-            (_sig == SimpleAggregator.zkID.selector);
+            (
+                (_src == readGateway) &&
+                (_sig == SimpleAggregator.zkID.selector)
+            ) || (
+                (_src == proofStorage) &&
+                (_sig == SimpleAggregator.clear.selector)
+            );
     }
 }

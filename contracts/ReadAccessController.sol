@@ -99,7 +99,7 @@ contract ReadAccessController is
         rHash = keccak256(
             abi.encodePacked(
                 _requestDetail.cType,
-                _requestDetail.fieldName,
+                _requestDetail.fieldNames,
                 _requestDetail.programHash,
                 _requestDetail.attester
             )
