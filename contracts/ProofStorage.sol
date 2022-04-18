@@ -123,7 +123,7 @@ contract ProofStorage is Context, AuthControl, Properties {
         );
     }
 
-    function update_proof(
+    function updateProof(
         bytes32 _kiltAccount,
         bytes32 _requestHash,
         string calldata _proofCid,
@@ -133,12 +133,13 @@ contract ProofStorage is Context, AuthControl, Properties {
             single_proof_exists(_msgSender(), _requestHash),
             "Your haven't add your proof before, please add it first"
         );
-        address boundedAddr = kiltAddr2Addr[_kiltAccount];
-        // the maybe new KiltAccount can not be bounded to other address
-        require(
-            boundedAddr == _msgSender() || boundedAddr == address(0),
-            "Kilt Address already Bounded"
-        );
+        // TODO: skip kilt account check now.
+        // address boundedAddr = kiltAddr2Addr[_kiltAccount];
+        // // the maybe new KiltAccount can not be bounded to other address
+        // require(
+        //     boundedAddr == _msgSender() || boundedAddr == address(0),
+        //     "Kilt Address already Bounded"
+        // );
 
         _addProof(
             _msgSender(),
@@ -165,5 +166,9 @@ contract ProofStorage is Context, AuthControl, Properties {
         // add proofCid to proofs
         fatProofs[_user][_requestHash].proofCid = _proofCid;
         fatProofs[_user][_requestHash].calcResult = _expResult;
+    }
+
+    function _clearVerifyResult() internal {
+        
     }
 }
