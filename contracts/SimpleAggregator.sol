@@ -7,12 +7,13 @@ import "./interfaces/IRegistry.sol";
 import "./interfaces/IChecker.sol";
 import "./interfaces/IReputation.sol";
 import "./interfaces/IRequest.sol";
+import "./interfaces/IAggregator.sol";
 import "./utils/AddressesUtils.sol";
 import "./utils/Bytes32sUtils.sol";
 
 import "@openzeppelin/contracts/utils/Context.sol";
 
-contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
+contract SimpleAggregator is Context, Properties, AuthControl, IChecker, IAggregator {
     using AddressesUtils for AddressesUtils.Addresses;
     using Bytes32sUtils for Bytes32sUtils.Bytes32List;
 
@@ -62,8 +63,8 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
     mapping(bytes32 => address) did;
 
     // To record the keepers' historical activities
-    // kepper => userAddress => requestHash => outputHash
-    mapping(address => mapping(address => mapping(bytes32 => bytes32))) keeperSubmissions;
+    // userAddress => requestHash => keepers
+    mapping(address => mapping(bytes32 => AddressesUtils.Addresses)) keeperSubmissions;
 
     // outputHash => Output
     mapping(bytes32 => Output) outputs;
@@ -78,7 +79,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         bool isPassed,
         uint128[] calcResult
     );
-    event Canonical(address cOwner, bytes32 requestHash, bytes32 outputHash);
+    event Canonical(address cOwner, bytes32 requestHash, bytes32 outputHash, bool isPassed, uint128[] calcOutput);
 
     constructor(address _registry) {
         registry = IRegistry(_registry);
@@ -107,7 +108,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
 
         // the request task has not been finished
         require(
-            zkCredential[_cOwner][_requestHash].agreeAt == 0,
+            !isFinished(_cOwner, _requestHash),
             "Err: Request task has already been finished"
         );
 
@@ -124,7 +125,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         }
 
         // record keeper's submission
-        keeperSubmissions[_msgSender()][_cOwner][_requestHash] = outputHash;
+        keeperSubmissions[_cOwner][_requestHash]._push(_msgSender());
 
         // modify vote
         Vote storage vote = votes[_cOwner][_requestHash][outputHash];
@@ -172,8 +173,6 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         zkCredential[_cOwner][_requestHash].outputHash = _outputHash;
         outputs[_outputHash].calcOutput = _calcOutput;
 
-        // modify did
-        // TODO: how to manage rootHash update?
         require(
             did[_rootHash] == address(0) || did[_rootHash] == _cOwner,
             "Err: rootHash already claimed"
@@ -199,13 +198,14 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
             }
         }
 
-        emit Canonical(_cOwner, _requestHash, _outputHash);
+        emit Canonical(_cOwner, _requestHash, _outputHash, _verifyRes, _calcOutput);
     }
 
     function zkID(address _who, bytes32 _requestHash)
         public
         view
         override
+        auth()
         returns (bool, uint128[] memory)
     {
         bytes32 outputHash = zkCredential[_who][_requestHash].outputHash;
@@ -244,7 +244,7 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         address _cOwner,
         bytes32 _requestHash
     ) public view returns (bool) {
-        return keeperSubmissions[_keeper][_cOwner][_requestHash] != bytes32(0);
+        return keeperSubmissions[_cOwner][_requestHash].exists(_keeper);
     }
 
     // true - the task is finished
@@ -257,28 +257,26 @@ contract SimpleAggregator is Context, Properties, AuthControl, IChecker {
         return zkCredential[_cOwner][_requestHash].agreeAt != 0;
     }
 
-    // // clear final result and keeper's submission history
-    // function clear(address _cOwner, bytes32 _requestHash) public auth {
+    // clear final result and keeper's submission history
+    function clear(address _cOwner, bytes32 _requestHash) public override auth returns (bool) {
 
-    //     // todo: clear zkCredential
+        // clear user -> requestHash info
+        delete minSubmission[_cOwner][_requestHash];
 
-    //     // todo: clear keeper history
+        // clear votes
+        Bytes32sUtils.Bytes32List storage outputHashList = outputHashes[
+            _cOwner
+        ][_requestHash];
 
-    //     // handle clear
-    //     Bytes32sUtils.Bytes32List storage outputHashList = outputHashes[
-    //         _cOwner
-    //     ][_requestHash];
+        // delete historical votes
+         for (uint256 i = 0; i < outputHashList.length(); i++) {
+            delete votes[_cOwner][_requestHash][outputHashList.element(i)];
+        }
 
-    //      for (uint256 i = 0; i < outputHashList.length(); i++) {
-    //         // punsish the malicious keepers
-    //         AddressesUtils.Addresses storage badVoters = votes[_cOwner][
-    //             _requestHash
-    //         ][outputHashList.element(i)].keepers;
+        delete zkCredential[_cOwner][_requestHash];
 
-    //         for (uint256 j = 0; j < badVoters.length(); j++) {
-    //             _reputation.punish(_requestHash, badVoters.element(j));
-    //             _reputation.reward(_requestHash, _msgSender());
-    //         }
-    //     }
-    // }
+        delete keeperSubmissions[_cOwner][_requestHash];
+
+        return true;
+    }
 }

@@ -13,6 +13,8 @@ async function main() {
     const keeper1 = await ethers.getSigner(6);
     const keeper2 = await ethers.getSigner(7);
     const keeper3 = await ethers.getSigner(8);
+    // the account to transfer ethers to faucet
+    let transferer = await ethers.getSigner(9);
     let keepers = [ keeper1.address, keeper2.address, keeper3.address ];
     console.log("------------------ EXECUTION ------------------\n");
     console.log("\tContract deploying...\n");
@@ -165,8 +167,18 @@ async function main() {
     let txPoapFactory = await registry.setAddressProperty(await property.CONTRACT_POAP_FACTORY(), factory.address);
     await txPoapFactory.wait();
 
+    // transfer to faucet
+    const tx = transferer.sendTransaction({
+        to: faucet.address,
+        value: ethers.utils.parseEther("1.0")
+    });
+
+    let provider = ethers.getDefaultProvider();
+    let balance = await provider.getBalance(faucet.address);
+    console.log("faucet balance is ", balance)
+
     // grant read access
-    await rac.superAuth(addrPoap, true);
+    await rac.superAuth(poapAddr, true);
 
     console.log("\n------------------ SUMMARIZE ------------------\n");
     console.log(`\tContract owner:\n\t${owner.address}\n`);

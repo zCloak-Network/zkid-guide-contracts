@@ -13,11 +13,11 @@ async function main() {
 
 
     // new poap
-    let tx = await poap.claim();
+    await poap.claim();
     console.log("claim over");
 
     // check balance
-    let balance = await poap.totalBalanceOf(poapId, proofAdder);
+    let balance = await poap.totalBalanceOf(poapId, proofAdder.address);
     console.log("balance of proofadder is ", balance);
 
 
