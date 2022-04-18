@@ -9,9 +9,10 @@ let kiltAddress = "0xf85edd58bd7de60dac41894c508a1522f86d4b1066e3a4cbea3ab0353e6
 let expectResult = [1];
 let attesterAccount = "0x4cfd2e722b370b1015343a27c9789815d803fdb1840aaa0406a26be55a95ff01"
 let isPassed = true;
-let proofStorageAddr = "0x2d1A8e7A8300C030407AeCbe4120DF9523CB1EeC"
-let simpleAggregatorAuthAddr = "0x69C34b841721798aD451CdE5A291EAf7E54f0f62"
-let simpleAggregatorAddr = "0x56C73736754B28daDE6ad75512CA000D8CfD145a"
+let proofStorageAddr = "0x2d1A8e7A8300C030407AeCbe4120DF9523CB1EeC";
+let simpleAggregatorAuthAddr = "0x69C34b841721798aD451CdE5A291EAf7E54f0f62";
+let simpleAggregatorAddr = "0x56C73736754B28daDE6ad75512CA000D8CfD145a";
+let uri = 'test';
 
 module.exports = {
     // data
@@ -27,6 +28,7 @@ module.exports = {
     proofStorageAddr: proofStorageAddr,
     simpleAggregatorAuthAddr: simpleAggregatorAuthAddr,
     simpleAggregatorAddr: simpleAggregatorAddr,
-    attesterAccount: attesterAccount
+    attesterAccount: attesterAccount,
+    uri: uri
 
 }

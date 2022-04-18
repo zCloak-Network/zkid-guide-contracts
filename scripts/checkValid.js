@@ -12,6 +12,7 @@ async function main() {
     // create contract intance
     const user1 = await ethers.getSigner(1);
     const project = await ethers.getSigner(3);
+    console.log(`project address: ${project.address}`);
 
     const SimpleAggregator = await ethers.getContractFactory(
         "SimpleAggregator",
@@ -35,7 +36,6 @@ async function main() {
         attester: attesterAccount
     });
 
-    // TODO: isValid is changed, check it
     console.log(`task wether finished or not? ${await sAggregator.isFinished(user1.address, rHash)}`);
 }
 

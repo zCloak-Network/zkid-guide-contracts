@@ -67,7 +67,7 @@ async function main() {
 
     const txKeeper3Submit = await sAggregator.connect(keeper3).submit(user1.address, rHash, cType, rootHash, true, attesterAccount, expectResult);
     await txKeeper3Submit.wait();
-    console.log(`keepre3 submit tx hash: ${txKeeper2Submit.hash}`);
+    console.log(`keepre3 submit tx hash: ${txKeeper3Submit.hash}`);
     console.log("keeper3 has submitted verification? ", await sAggregator.hasSubmitted(keeper3.address, user1.address, rHash));
 
 }
