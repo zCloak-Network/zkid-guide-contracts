@@ -124,7 +124,7 @@ describe("SimpleAggregator Contract", function () {
             expectResult
         );
 
-        rHash = await rac.getRequestHash({cType: cType, fieldName: fieldName, programHash: programHash, attester: attester});
+        rHash = await rac.getRequestHash({cType: cType, fieldNames: fieldName, programHash: programHash, attester: attester});
         oHash = await mockSAggregator.getOutputHash(rootHash, expectResult, isPassed_t, attester);
     });
 
@@ -132,7 +132,7 @@ describe("SimpleAggregator Contract", function () {
         it("should success if keeper submit verification result(one keeper)", async function () {
             // check storage value
             let tx = await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
-            assert(await mockSAggregator.getKeeperSubmissions(keeper1.address, user1.address, rHash), oHash);
+            // assert(await mockSAggregator.getKeeperSubmissions(keeper1.address, user1.address, rHash), oHash);
             assert(await mockSAggregator.getVoterAddress(user1.address, rHash, oHash, 0), keeper1.address);
             assert(await mockSAggregator.getVoterIndex(user1.address, rHash, oHash, keeper1.address), 0);
             assert(await mockSAggregator.getVoteCount(user1.address, rHash, oHash), 1);

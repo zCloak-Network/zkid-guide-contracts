@@ -153,7 +153,7 @@ describe('Reputation Contract', function () {
         tokens = [MTKA.address, MTKB.address];
         requestHash = await rac.getRequestHash({
             cType: cType,
-            fieldName: fieldName,
+            fieldNames: fieldName,
             programHash: programHash,
             attester: attester
         });
