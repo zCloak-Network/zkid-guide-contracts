@@ -21,6 +21,7 @@ const { attesterAccount, cType, fieldName, programHash, proofCid, rootHash, expe
 async function main() {
     // create contract intance
     const user1 = await ethers.getSigner(1);
+    console.log(`user1 address: ${user1.address}\nuser1 addProof...`);
     const ProofStorage = await ethers.getContractFactory("ProofStorage", user1);
     const proof = ProofStorage.attach(addrProofStorage);
 

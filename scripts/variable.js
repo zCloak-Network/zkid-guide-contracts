@@ -17,6 +17,7 @@ module.exports = {
     cType: cType,
     programHash: programHash,
     proofCid: proofCid,
+    newProofCid: newProofCid,
     rootHash: rootHash,
     kiltAddress: kiltAddress,
     expectResult: expectResult,

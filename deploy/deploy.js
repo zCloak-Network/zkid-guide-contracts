@@ -35,17 +35,21 @@ async function main() {
 
     let registry = await Registry.deploy();
     await registry.deployed();
+    console.log(`Registey: ${registry.address}`);
 
     console.log("registry deployed", registry.address);
 
     let property = await Properties.deploy();
     await property.deployed();
+    console.log(`Properties: ${property.address}`);
 
     let addressesUtils = await AddressesUtils.deploy();
     await addressesUtils.deployed();
+    console.log(`AddressesUtils: ${addressesUtils.address}`);
 
     let bytes32sUtils = await Bytes32sUtils.deploy();
     await bytes32sUtils.deployed();
+    console.log(`Bytes32Utils: ${bytes32sUtils.address}`);
 
     let proof = await ProofStorage.deploy(registry.address);
     await proof.deployed();
@@ -57,12 +61,15 @@ async function main() {
 
     let racAuth = await RACAuth.deploy(registry.address);
     await racAuth.deployed();
+    console.log(`ReadAccessControllerAuth: ${racAuth.address}`);
 
     let reputationAuth = await ReputationAuth.deploy(registry.address);
     await reputationAuth.deployed();
+    console.log(`ReputationAuth: ${reputationAuth.address}`);
 
     let sAggregatorAuth = await SimpleAggregatorAuth.deploy(keepers, registry.address);
     await sAggregatorAuth.deployed();
+    console.log(`SimpleAggregatorAuth: ${sAggregatorAuth.address}`);
 
     console.log("sAggregatorAuth deployed", sAggregatorAuth.address);
 
@@ -74,6 +81,7 @@ async function main() {
     );
     let reputation = await Reputation.deploy(registry.address);
     await reputation.deployed();
+    console.log(`Reputation: ${reputation.address}`);
 
     const SAggregator = await ethers.getContractFactory(
         "SimpleAggregator",
@@ -87,7 +95,6 @@ async function main() {
     );
     let sAggregator = await SAggregator.deploy(registry.address);
     await sAggregator.deployed();
-
     console.log("sAggregator deployed", sAggregator.address);
 
     let faucet = await Faucet.deploy();
@@ -157,7 +164,8 @@ async function main() {
     let txReadGateway = await registry.setAddressProperty(property.CONTRACT_READ_GATEWAY(), rac.address);
     await txReadGateway.wait();
 
-    await registry.setAddressProperty(await property.CONTRACT_POAP_FACTORY(), factory.address);
+    let txPoapFactory = await registry.setAddressProperty(await property.CONTRACT_POAP_FACTORY(), factory.address);
+    await txPoapFactory.wait();
 
     // transfer to faucet
     const tx = transferer.sendTransaction({
