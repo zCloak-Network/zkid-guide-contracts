@@ -23,7 +23,7 @@ const {
     addrSAggregator,
     addrAddressesUtils,
     addrBytes32sUtils
-} = require("./contract.json");
+} = require("../tmp/contract.json");
 
 async function main() {
     // generate workers contract instance
@@ -50,7 +50,7 @@ async function main() {
 
     let rHash = await rac.getRequestHash({
         cType: cType,
-        fieldName: fieldName,
+        fieldNames: fieldName,
         programHash: programHash,
         attester: attesterAccount
     });

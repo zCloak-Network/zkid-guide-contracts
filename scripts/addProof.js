@@ -13,7 +13,7 @@ let newAttester = ethers.utils.formatBytes32String('newAttester');
 let kiltAccount = ethers.utils.formatBytes32String("kiltAccount");
 let kiltAccountOther = ethers.utils.formatBytes32String("kiltAccountOther");
 
-const { addrProofStorage } = require("./contract.json");
+const { addrProofStorage } = require("../tmp/contract.json");
 
 const { attesterAccount, cType, fieldName, programHash, proofCid, rootHash, expectResult, proofStorageAddr } = require("./variable.js");
 

@@ -121,14 +121,14 @@ describe("Faucet", function () {
         // calculate hash variable
         rHash = await rac.getRequestHash({
             cType: cType,
-            fieldName: fieldName,
+            fieldNames: fieldName,
             programHash: programHash,
             attester: attester
         });
         oHash = await mockSAggregator.getOutputHash(rootHash, expectResult, isPassed_t, attester);
 
         // attach an nft contract
-        await factory.newPoap(rHash, uri, registry.address);
+        await factory.newPoap(rHash, uri);
         const ZcloakPoap = await ethers.getContractFactory('ZCloakPoap', owner);
         poap = ZcloakPoap.attach(await factory.connect(user1).rh2poaps(rHash));
 
@@ -165,14 +165,13 @@ describe("Faucet", function () {
         await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_f, attester, expectResult);
         await mockSAggregator.connect(keeper2).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
         await mockSAggregator.connect(keeper3).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
-        console.log(`script who: ${user1.address}`);
-        console.log(`script rHash: ${rHash}`);
     });
 
     describe('ZCloakPoap', function () {
         it('Should pass if project claim successfully', async function () {
+            let popaIdendifier = '40522552889507486262027357734207559572';
             await poap.connect(user1).claim();
-            await poap.connect(user1).claim();
+            expect(await poap.totalBalanceOf(popaIdendifier, user1.address)).to.equal(1);
         });
     });
 

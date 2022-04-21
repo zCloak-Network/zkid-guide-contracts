@@ -3,18 +3,15 @@ const { assert, expect } = require('chai');
 
 describe("Faucet", function () {
     let faucet;
-    let token;
 
     let owner;
     let user;
-    let project;
 
     let tx;
 
     beforeEach(async function () {
         owner = await ethers.getSigner(0);
         user = await ethers.getSigner(1);
-        project = await ethers.getSigner(3);
         
         const Faucet = await ethers.getContractFactory('Faucet', owner);
         faucet = await Faucet.deploy();
@@ -28,10 +25,14 @@ describe("Faucet", function () {
     });
 
     describe('cliam', function () {
-        it('Should be pass if user can successfully claim ', async function () {
-            // console.log(await user.getBalance());
-            await faucet.connect(user).claim();
-            // console.log(await user.getBalance());
+        it('Should emit Cliam event if user can successfully claim ', async function () {
+            // console.log(`${ethers.utils.formatEther(await user.getBalance())} DEV`);
+
+            await expect(faucet.connect(user).claim())
+                .to.emit(faucet, 'Claim')
+                .withArgs(user.address, ethers.utils.parseEther('0.2'));
+
+            // console.log(`${ethers.utils.formatEther(await user.getBalance())} DEV`);
         });
 
     });

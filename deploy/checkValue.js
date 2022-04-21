@@ -1,25 +1,19 @@
 ///
 /// @author vsszhang
-/// @dev check value
+/// @dev check deployed value
 ///
 const { ethers } = require("hardhat");
 
 const {
-    addrRAC,
     addrRegistry,
     addrProperties,
-    addrSAggregator,
-    addrAddressesUtils,
-    addrBytes32sUtils,
     addrSAggregatorAuth,
-    addrFactory
-} = require("./moon.json");
+    addrFaucet
+} = require("../tmp/contract.json");
 
 async function main() {
     // create contract instance
     const owner = await ethers.getSigner(0);
-    // const user1 = await ethers.getSigner(1);
-    // const project = await ethers.getSigner(3);
     const keeper1 = await ethers.getSigner(6);
     const keeper2 = await ethers.getSigner(7);
     const keeper3 = await ethers.getSigner(8);
@@ -29,21 +23,6 @@ async function main() {
 
     const Properties = await ethers.getContractFactory("Properties", owner);
     const properties = Properties.attach(addrProperties);
-
-    const SimpleAggregator = await ethers.getContractFactory(
-        "SimpleAggregator",
-        {
-            libraries: {
-                AddressesUtils: addrAddressesUtils,
-                Bytes32sUtils: addrBytes32sUtils,
-            },
-        },
-        owner
-    );
-    const sAggregator = SimpleAggregator.attach(addrSAggregator);
-
-    // const RAC = await ethers.getContractFactory("ReadAccessController", project);
-    // const rac = RAC.attach(addrRAC);
 
     const SAggregatorAuth = await ethers.getContractFactory("SimpleAggregatorAuth", owner);
     const saAuth = SAggregatorAuth.attach(addrSAggregatorAuth);
@@ -62,6 +41,11 @@ async function main() {
     console.log(`CONTRACT_REWARD address: ${await registry.addressOf(properties.CONTRACT_REWARD())}`);
     console.log(`CONTRACT_READ_GATEWAY address: ${await registry.addressOf(properties.CONTRACT_READ_GATEWAY())}`);
     console.log(`CONTRACT_POAP_FACTORY address: ${await registry.addressOf(properties.CONTRACT_POAP_FACTORY())}`);
+
+    // check faucet balance
+    let provider = new ethers.providers.JsonRpcProvider('https://rpc.api.moonbase.moonbeam.network');
+    let balance = await provider.getBalance(addrFaucet);
+    console.log(`faucet balance is ${ethers.utils.formatEther(balance)} ether`);
 
 }
 

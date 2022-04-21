@@ -139,7 +139,7 @@ describe('Reputation Contract', function () {
 
         requestHash = await rac.getRequestHash({
             cType: cType,
-            fieldName: fieldName,
+            fieldNames: fieldName,
             programHash: programHash,
             attester: attester
         });

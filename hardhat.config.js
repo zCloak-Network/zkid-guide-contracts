@@ -28,7 +28,8 @@ const {
   privateKeyWorker3,
   privateKeyKeeper1,
   privateKeyKeeper2,
-  privateKeyKeeper3
+  privateKeyKeeper3,
+  privateKeyTransferer
 } = require('./secrets.json');
 //import { privateKeyKovan, privateKeyMoonbase } from "./secrets.json";
 
@@ -67,7 +68,8 @@ module.exports = {
         privateKeyWorker3,
         privateKeyKeeper1,
         privateKeyKeeper2,
-        privateKeyKeeper3
+        privateKeyKeeper3,
+        privateKeyTransferer
       ] // Insert your private key here
     },
 
