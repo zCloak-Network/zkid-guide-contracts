@@ -5,7 +5,6 @@
 ///
 const fs = require("fs");
 const { ethers } = require("hardhat");
-const {requestHash} = require("../scripts/variable.js");
 
 async function main() {
     // deploy the contract
@@ -30,8 +29,6 @@ async function main() {
     const SimpleAggregatorAuth = await ethers.getContractFactory("SimpleAggregatorAuth", owner);
     const Faucet = await ethers.getContractFactory('Faucet', owner);
     const PoapFactory = await ethers.getContractFactory('PoapFactory', owner);
-    const Poap = await ethers.getContractFactory('ZCloakPoap', owner);
- 
 
     let registry = await Registry.deploy();
     await registry.deployed();
@@ -104,11 +101,6 @@ async function main() {
 
     let factory = await PoapFactory.deploy(registry.address);
     await factory.deployed();
-    
-    await factory.newPoap(requestHash, "URI");
-    let poapAddr = await factory.rh2poaps(requestHash);
-
-
 
     // output result to JSON file
     const obj = {
@@ -124,11 +116,11 @@ async function main() {
         addrReputation: reputation.address,
         addrSAggregator: sAggregator.address,
         addrFactory: factory.address,
-        addrPoap: poapAddr
+        addrFaucet: faucet.address,
     }
 
     const content = JSON.stringify(obj, null, 4);
-    fs.writeFileSync('./scripts/contract.json', content);
+    fs.writeFileSync('../tmp/contract.json', content);
 
     // basic conditions
     // AuthControl setting
@@ -168,14 +160,15 @@ async function main() {
     await txPoapFactory.wait();
 
     // transfer to faucet
-    const tx = transferer.sendTransaction({
+    const tx = await transferer.sendTransaction({
         to: faucet.address,
         value: ethers.utils.parseEther("1.0")
     });
+    await tx.wait();
 
-    let provider = ethers.getDefaultProvider();
+    let provider = new ethers.providers.JsonRpcProvider('https://rpc.api.moonbase.moonbeam.network');
     let balance = await provider.getBalance(faucet.address);
-    console.log("faucet balance is ", balance)
+    console.log(`faucet balance is ${ethers.utils.formatEther(balance)} ether`);
 
     // grant read access
     await rac.superAuth(poapAddr, true);

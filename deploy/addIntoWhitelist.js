@@ -1,8 +1,3 @@
-///
-/// @author vsszhang
-/// @dev This is a deploy script, you can run this script to deploy all contract.
-/// Also, this script can help you add some useful things.
-///
 const { ethers } = require("hardhat");
 
 // aggregator auth
