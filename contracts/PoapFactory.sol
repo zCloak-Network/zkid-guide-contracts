@@ -45,4 +45,14 @@ contract PoapFactory is Ownable, IFactory {
     function getRequestHash(address _nft) public override view returns (bytes32) {
         return poap2rhs[_nft];
     }
+
+    function pause(address _poap) public onlyOwner {
+        ZCloakPoap poap = ZCloakPoap(_poap);
+        poap.pause();
+    }
+
+    function unpause(address _poap) public onlyOwner {
+        ZCloakPoap poap = ZCloakPoap(_poap);
+        poap.unPause();
+    }
 }
