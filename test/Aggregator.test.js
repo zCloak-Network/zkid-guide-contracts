@@ -11,10 +11,12 @@ const {
     rootHash,
     expectResult,
     isPassed_t,
-    isPassed_f
+    isPassed_f,
+    blankBytes20,
+    blankBytes32
 } = require("./testVariables.js");
 
-describe("SimpleAggregator Contract", function () {
+describe("SimpleAggregator API check", function () {
     let registry;
     let properties;
     let addressesUtils;
@@ -37,12 +39,13 @@ describe("SimpleAggregator Contract", function () {
     let keeper3;
     let keeper4;
     let keeper5;
+    let alith;
 
     let rHash;
     let oHash;
 
     beforeEach(async function () {
-        [owner, user1, keeper1, keeper2, keeper3, keeper4, keeper5] = await ethers.getSigners();
+        [ owner, user1, keeper1, keeper2, keeper3, keeper4, keeper5, alith ] = await ethers.getSigners();
         let keepers = [keeper1.address, keeper2.address, keeper3.address, keeper4.address, keeper5.address];
 
         const Registry = await ethers.getContractFactory("Registry", owner);
@@ -129,7 +132,7 @@ describe("SimpleAggregator Contract", function () {
     });
 
     describe("keeper submit verification result", function () {
-        it("should success if keeper submit verification result(one keeper)", async function () {
+        it("keeper submit verification result(one keeper)", async function () {
             // check storage value
             let tx = await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
             // assert(await mockSAggregator.getKeeperSubmissions(keeper1.address, user1.address, rHash), oHash);
@@ -158,7 +161,7 @@ describe("SimpleAggregator Contract", function () {
                 );
         });
 
-        it("should success if multi-keeper add verification result", async function () {
+        it("multi-keeper add verification result", async function () {
             // verification result is false
             await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_f, attester, expectResult);
             await mockSAggregator.connect(keeper2).submit(user1.address, rHash, cType, rootHash, isPassed_f, attester, expectResult);
@@ -176,7 +179,7 @@ describe("SimpleAggregator Contract", function () {
             expect((await mockReputation.getKeeperTotalReputations(keeper5.address)).toNumber()).to.equal(3);
         });
 
-        it("Should stop submit if verification result has up to THRESHOLD", async function () {
+        it("STOP: verification result has up to THRESHOLD", async function () {
             // THRESHOLD is 3
             await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
             await mockSAggregator.connect(keeper2).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
@@ -189,17 +192,72 @@ describe("SimpleAggregator Contract", function () {
                 .to.be.revertedWith("Err: Request task has already been finished");
         });
 
-        it("Should revert if keeper submit twice for the same request task", async function () {
+        it("REVERT: keeper submit twice for the same request task", async function () {
             await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
 
             await expect(mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult))
                 .to.be.revertedWith("Err: keeper can only submit once to the same request task");
         });
 
-        it("Should revert if user use fake attester(keeper is loyal)", async function () {
+        it("REVERT: user use fake attester(keeper is loyal)", async function () {
             let kiltAttester = ethers.utils.formatBytes32String("true_attester");
             await expect(mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_f, kiltAttester, expectResult))
                 .to.be.revertedWith("Err: this attestation does not match one which provided by user");
         });
+    });
+
+    it('addWorker(address): base on saAuth contract', async function () {
+        await expect(sAggregatorAuth.addWorker(alith.address))
+            .to.emit(sAggregatorAuth, 'AddWorker')
+            .withArgs(alith.address);
+        expect(await sAggregatorAuth.isWorker(alith.address)).to.equal(true);
+    });
+
+    it('checkAttestation(bytes32,bytes32,bytes32)', async function () {
+        await registry.setUint32Property(properties.UINT32_THRESHOLD(), 1);
+        expect(await registry.uint32Of(properties.UINT32_THRESHOLD())).to.equal(1);
+        await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, true, attester, expectResult);
+
+        expect(await mockSAggregator.checkAttestation(rHash, cType, attester)).to.equal(true);
+    });
+
+    it('hasSubmitted(address,address,bytes32)', async function () {
+        await registry.setUint32Property(properties.UINT32_THRESHOLD(), 1);
+        expect(await registry.uint32Of(properties.UINT32_THRESHOLD())).to.equal(1);
+        await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, true, attester, expectResult);
+
+        expect(await mockSAggregator.hasSubmitted(keeper1.address, user1.address, rHash)).to.equal(true);
+        expect(await mockSAggregator.hasSubmitted(keeper2.address, user1.address, rHash)).to.equal(false);
+    });
+
+    it('isFinished(address,bytes32)', async function () {
+        await registry.setUint32Property(properties.UINT32_THRESHOLD(), 1);
+        expect(await registry.uint32Of(properties.UINT32_THRESHOLD())).to.equal(1);
+        await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, true, attester, expectResult);
+
+        expect(await mockSAggregator.isFinished(user1.address, rHash)).to.equal(true);
+    });
+
+    it('clear(address,bytes32)', async function () {
+        await registry.setUint32Property(properties.UINT32_THRESHOLD(), 2);
+        expect(await registry.uint32Of(properties.UINT32_THRESHOLD())).to.equal(2);
+        await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, true, attester, expectResult);
+        await mockSAggregator.connect(keeper2).submit(user1.address, rHash, cType, rootHash, true, attester, expectResult);
+
+        await mockSAggregator.clear(user1.address, rHash);
+
+        // check value
+        expect(await mockSAggregator.getMinSubmission(user1.address, rHash)).to.equal(0);
+        // delete arrary Addresses.addresses(votes.keepers), can not read it content
+        
+        // note: Addresses mapping variable index not deleted, but it affect nothing
+        expect(await mockSAggregator.getVoterIndex(user1.address, rHash, oHash, keeper1.address)).to.equal(0);
+        expect(await mockSAggregator.getVoterIndex(user1.address, rHash, oHash, keeper2.address)).to.equal(1);
+
+        expect(await mockSAggregator.getVoteCount(user1.address, rHash, oHash)).to.equal(0);
+        expect(await mockSAggregator.getFinalResult(user1.address, rHash)).to.equal(false);
+        expect(await mockSAggregator.getFinalTimestamp(user1.address, rHash)).to.equal(0);
+        expect(await mockSAggregator.getFinalOHash(user1.address, rHash)).to.equal(blankBytes32);
+        // delete arrary Addresses.addresses(keeperSubmissions), can not read it content
     });
 });

@@ -141,12 +141,12 @@ describe("ProofStorage contract", function () {
                 .to.emit(proof, 'AddProof')
                 .withArgs(
                     user1.address,
-                    kiltAccount,
                     attester,
                     cType,
                     programHash,
                     fieldName,
                     proofCid,
+                    rHash,
                     rootHash,
                     expectResult
                 );
@@ -192,38 +192,6 @@ describe("ProofStorage contract", function () {
     });
 
     describe("User update proof", function () {
-        it("Should emit 'UpdateProof' event if same user update a new proof successfully", async function () {
-            // user add a proof first
-            await proof.connect(user1).addProof(
-                kiltAccount,
-                attester,
-                cType,
-                fieldName,
-                programHash,
-                proofCid,
-                rootHash,
-                expectResult
-            );
-
-            // owner execute unPause
-            await proof.unPause();
-
-            let tx = await proof.connect(user1).updateProof(
-                kiltAccount,
-                rHash,
-                newProofCid,
-                rootHash,
-                expectResult
-            );
-            expect(tx).to.emit(proof, 'UpdateProof')
-                .withArgs(user1.addProof, kiltAccount, rHash, newProofCid);
-
-            // check the storage
-            expect(await proof.kiltAddr2Addr(kiltAccount)).to.equal(user1.address);
-            expect(await proof.getProofCid(user1.address, rHash)).to.equal(newProofCid);
-            expect(await proof.getCalcResult(user1.address, rHash, 0)).to.equal(expectResult[0]);
-        });
-
         it("Should success if same user uses another kiltAccount to update a new proof", async function () {
             // user add a proof first
             await proof.connect(user1).addProof(

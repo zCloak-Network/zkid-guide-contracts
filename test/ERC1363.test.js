@@ -1,115 +1,136 @@
 const fs = require('fs');
 const { ethers } = require('hardhat');
-const { assert, expect } = require('chai');
+const { expect } = require('chai');
 
-const {
-    cType,
-    fieldName,
-    programHash,
-    expectResult,
-} = require('./testVariables')
+const sourceFile = fs.readFileSync('../artifacts/contracts/test/MockERC1363.sol/MockERC1363.json');
+const source = JSON.parse(sourceFile);
+const abi = source.abi;
 
-describe("MockERC1363", function () {
-    var registry;
-    var properties;
-    var mock;
-    var erc1363;
-    var rac;
-    var reputation;
-    var project;
-    var sAggregator;
+describe("MockERC1363(no callback, no param 'data')", function () {
+    let registry;
+    let properties;
+    let addressesUtils;
+    let bytes32sUtils;
+    let mock;
+    let erc1363;
+    let rac;
+    let mockReputation;
+    let mockSAggregator;
 
-    var sourceFile;
-    var source;
-
-    var owner;
-    var user1;
-    var user2;
-    var attester;
+    let owner;
+    let user1;
+    let user2;
 
     beforeEach(async function () {
 
-        [owner, user1, user2, attester] = await ethers.getSigners();
-        sourceFile = fs.readFileSync('../artifacts/contracts/test/MockERC1363.sol/MockERC1363.json');
-        source = JSON.parse(sourceFile);
-        abi = source.abi;
+        [owner, user1, user2] = await ethers.getSigners();
 
         const Registry = await ethers.getContractFactory('Registry', owner);
+        const Properties = await ethers.getContractFactory('Properties', owner);
+        const AddressesUtils = await ethers.getContractFactory('AddressesUtils', owner);
+        const Bytes32sUtils = await ethers.getContractFactory("Bytes32sUtils", owner);
+        const RAC = await ethers.getContractFactory('ReadAccessController', owner);
+        const MockERC1363 = await ethers.getContractFactory('MockERC1363', owner);
+
         registry = await Registry.deploy();
         await registry.deployed();
 
-        const Properties = await ethers.getContractFactory('Properties', owner);
         properties = await Properties.deploy();
         await properties.deployed();
 
-        const RAC = await ethers.getContractFactory('ReadAccessController', owner);
+        addressesUtils = await AddressesUtils.deploy();
+        await addressesUtils.deployed();
+
+        bytes32sUtils = await Bytes32sUtils.deploy();
+        await bytes32sUtils.deployed();
+
         rac = await RAC.deploy(registry.address);
         await rac.deployed();
 
-        const MockERC1363 = await ethers.getContractFactory('MockERC1363', owner);
         mock = await MockERC1363.deploy('MyToken', 'MTK');
         await mock.deployed();
 
-        const ReputationV1 = await ethers.getContractFactory('ReputationV1', owner);
-        reputation = await ReputationV1.deploy(registry.address);
-        await reputation.deployed();
+        // library linking
+        const MockReputation = await ethers.getContractFactory('MockReputation', {
+            libraries: {
+                AddressesUtils: addressesUtils.address
+            }
+        }, owner);
+        mockReputation = await MockReputation.deploy(registry.address);
+        await mockReputation.deployed();
 
-        const SimpleAggragator = await ethers.getContractFactory('SimpleAggragator', owner);
-        sAggregator = await SimpleAggragator.deploy(registry.address);
-        await sAggregator.deployed();
-
-        // MockProject contract is our project
-        const MockProject = await ethers.getContractFactory('MockProject', owner);
-        project = await MockProject.deploy(rac.address);
-        await project.deployed();
+        const MockSAggregator = await ethers.getContractFactory("MockSimpleAggregator", {
+            libraries: {
+                AddressesUtils: addressesUtils.address,
+                Bytes32sUtils: bytes32sUtils.address,
+            },
+        }, owner);
+        mockSAggregator = await MockSAggregator.deploy(registry.address);
+        await mockSAggregator.deployed();
 
         // ERC1363 contract is our token
         erc1363 = new ethers.Contract(mock.address, abi, owner);
 
         // registry contract
-        await registry.setAddressProperty(properties.CONTRACT_REWARD(), reputation.address);
+        await registry.setAddressProperty(properties.CONTRACT_REWARD(), mockReputation.address);
         await registry.setAddressProperty(properties.CONTRACT_READ_GATEWAY(), rac.address);
-        await registry.setAddressProperty(properties.CONTRACT_AGGREGATOR(), sAggregator.address);
+        await registry.setAddressProperty(properties.CONTRACT_AGGREGATOR(), mockSAggregator.address);
     });
 
     describe('transferAndCall', function () {
-        it('transferAndCall without data: should emit Transfer event', async function () { });
+        it('Should success if successfully call transferAndCall', async function () {
+            expect(await erc1363.balanceOf(owner.address)).to.equal(ethers.utils.parseEther('100.0'));
+            expect(await erc1363.balanceOf(user1.address)).to.equal(ethers.utils.parseEther('0.0'));
+            let tx = await erc1363['transferAndCall(address,uint256)'](
+                user1.address,
+                ethers.utils.parseEther('10.0')
+            );
+            expect(tx)
+                .to.emit(erc1363, 'Transfer')
+                .withArgs(
+                    owner.address,
+                    user1.address,
+                    ethers.utils.parseEther('10.0')
+                );
+
+            expect(await erc1363.balanceOf(owner.address)).to.equal(ethers.utils.parseEther('90.0'));
+            expect(await erc1363.balanceOf(user1.address)).to.equal(ethers.utils.parseEther('10.0'));
+        });
     });
 
     describe('transferFromAndCall', function () {
-        describe("parameter 'receipt' is human account", function () {
-            it('transferFromAndCall without data: should emit Transfer event', async function () {
-                await erc1363.connect(owner).approve(user1.address, ethers.utils.parseEther('10.0'));
-                var tx = await erc1363.connect(user1)['transferFromAndCall(address,address,uint256)'](
-                    owner.address,
-                    user2.address,
-                    ethers.utils.parseEther('5.0')
-                );
-                await expect(tx)
-                    .to.emit(erc1363, 'Transfer')
-                    .withArgs(owner.address, user2.address, ethers.utils.parseEther('5.0'));
-            });
-            // TODO: when 'to' is RAC addr?
+        it('Should success if successfully call transferFromAndCall', async function () {
+            await erc1363.connect(owner).approve(user1.address, ethers.utils.parseEther('10.0'));
+            expect(await erc1363.allowance(owner.address, user1.address)).to.equal(ethers.utils.parseEther('10.0'));
+
+            let tx = await erc1363.connect(user1)['transferFromAndCall(address,address,uint256)'](
+                owner.address,
+                user2.address,
+                ethers.utils.parseEther('10.0')
+            );
+            await expect(tx)
+                .to.emit(erc1363, 'Transfer')
+                .withArgs(owner.address, user2.address, ethers.utils.parseEther('10.0'));
+
+            expect(await erc1363.allowance(owner.address, user1.address)).to.equal(ethers.utils.parseEther('0'));
         });
+    });
 
-        describe("parameter 'receipt' is RAC address", function () {
-            it('transferFromAndCall without data: should emit Transfer event', async function () {
-                await rac.connect(owner).initializeRequest(cType, fieldName, programHash, expectResult, attester);
-                var rHash = await rac.connect(owner).getRequestHash(cType, fieldName, programHash, expectResult, attester);
-                await rac.connect(owner).applyRequest(rHash, project.address, erc1363.address, 1);
-                // TODO: keeper should submit
-
-                await erc1363.connect(owner).approve(user1.address, ethers.utils.parseEther('10.0'));
-                var tx = await erc1363.connect(user1)['transferFromAndCall(address,address,uint256)'](
+    describe('approveAndCall', function () {
+        it('Should success if successfully call approveAndCall', async function () {
+            expect(await erc1363.allowance(owner.address, user1.address)).to.equal(ethers.utils.parseEther('0'));
+            let tx = await erc1363['approveAndCall(address,uint256)'](
+                user1.address,
+                ethers.utils.parseEther('10.0')
+            );
+            expect(tx)
+                .to.emit(erc1363, 'Approval')
+                .withArgs(
                     owner.address,
-                    rac.address,
-                    ethers.utils.parseEther('5.0')
+                    user1.address,
+                    ethers.utils.parseEther('10.0')
                 );
-                await expect(tx)
-                    .to.emit(erc1363, 'Transfer')
-                    .withArgs(owner.address, user2.address, ethers.utils.parseEther('5.0'));
-            });
+            expect(await erc1363.allowance(owner.address, user1.address)).to.equal(ethers.utils.parseEther('10'));
         });
-
     });
 });

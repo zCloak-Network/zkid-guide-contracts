@@ -11,7 +11,8 @@ const {
     rootHash,
     expectResult,
     isPassed_t,
-    isPassed_f
+    isPassed_f,
+    blankBytes20
 } = require("./testVariables.js");
 
 describe("Faucet", function () {
@@ -168,10 +169,35 @@ describe("Faucet", function () {
     });
 
     describe('ZCloakPoap', function () {
-        it('Should pass if project claim successfully', async function () {
-            let popaIdendifier = '40522552889507486262027357734207559572';
+
+        let popaIdendifier = '40522552889507486262027357734207559572';
+
+        it('claim(): call claim successfully', async function () {
             await poap.connect(user1).claim();
             expect(await poap.totalBalanceOf(popaIdendifier, user1.address)).to.equal(1);
+        });
+
+        it("pause() => unpause() => _beforeTokenTransfer(address,address,address,uint256[],uint256[],bytes):  call burn successfully", async function () {
+            // variable
+            let nftId = await poap.getNftId(popaIdendifier);
+
+            // user claim NFT first
+            await poap.connect(user1).claim();
+            expect(await poap.totalBalanceOf(popaIdendifier, user1.address)).to.equal(1);
+
+            // '_paused' variable has been set as true in poap contract's constructor
+            await expect(factory.pause(poap.address))
+                .to.be.revertedWith("Pausable: paused");
+
+            // pause => cannot burn => unpause => can burn
+            await expect(poap.connect(user1).burnOne())
+                .to.be.revertedWith("ERC1155Pausable: token transfer while paused");
+
+            await factory.unpause(poap.address);
+            // await poap.connect(user1).burnOne();
+            await expect(poap.connect(user1).burnOne())
+                .to.emit(poap, 'TransferSingle')
+                .withArgs(user1.address, user1.address, blankBytes20, nftId, 1);
         });
     });
 
