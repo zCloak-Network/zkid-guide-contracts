@@ -42,6 +42,9 @@ contract Reputation is
     // requestHash => token => totalReward
     mapping(bytes32 => mapping(address => uint256)) rewardPool;
 
+    // requestHash => token => remaining assets
+    mapping(bytes32 => mapping(address => uint256)) remainingAssets;
+
     // requstHash => token list
     mapping(bytes32 => AddressesUtils.Addresses) payments;
 
@@ -123,7 +126,7 @@ contract Reputation is
                 continue;
             }
 
-            _claim(token, _msgSender(), withdraw, individualR);
+            _claim(token, _msgSender(), withdraw, _requestHash, individualR);
         }
 
         emit BatchClaim(_requestHash, _msgSender());
@@ -143,15 +146,17 @@ contract Reputation is
             return false;
         }
 
-        return _claim(_token, _msgSender(), withdraw, individualR);
+        return _claim(_token, _msgSender(), withdraw, _requestHash, individualR);
     }
 
     function _claim(
         address _token,
         address _claimer,
         uint256 _withdraw,
+        bytes32 _requestHash,
         IndividualReputation storage _individualR
     ) internal nonReentrant returns (bool) {
+        remainingAssets[_requestHash][_token] -= _withdraw;
         _individualR.claimedAmount[_token] += _withdraw;
         IERC1363(_token).transfer(_claimer, _withdraw);
 
@@ -272,6 +277,7 @@ contract Reputation is
         (bool res, uint256 rPool) = rewardPool[requestHash][_msgSender()]
             .tryAdd(_amount);
         rewardPool[requestHash][_msgSender()] += rPool;
+        remainingAssets[requestHash][_msgSender()] += rPool;
 
         return IERC1363Receiver(this).onTransferReceived.selector;
         // TODO: add event
@@ -298,7 +304,8 @@ contract Reputation is
             _individualR.claimedAmount[_token]
         );
 
-        uint256 maxAmount = rewardPool[_requestHash][_token];
+        // uint256 maxAmount = rewardPool[_requestHash][_token];
+        uint maxAmount = remainingAssets[_requestHash][_token];
 
         // can not exceed amount of tken in the reward pool
         uint256 withdraw;
