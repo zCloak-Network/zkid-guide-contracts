@@ -3,6 +3,7 @@ require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ganache");
 require("@nomiclabs/hardhat-truffle5");
 require("hardhat-log-remover");
+require("solidity-coverage");
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -38,7 +39,7 @@ const {
  */
 module.exports = {
   solidity: {
-    version: "0.8.0",
+    version: "0.8.5",
     settings: {
       optimizer: {
         enabled: true,
