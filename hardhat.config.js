@@ -4,6 +4,7 @@ require("@nomiclabs/hardhat-ganache");
 require("@nomiclabs/hardhat-truffle5");
 require("hardhat-log-remover");
 require("solidity-coverage");
+require("hardhat-gas-reporter");
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -79,5 +80,11 @@ module.exports = {
       chainId: 1285, //(hex: 0x505),
       //accounts: [privateKeyMoonriver] // Insert your private key here
     },
+  },
+
+  gasReporter: {
+    // Turn on gas_reporter if you want to ues it (false => true).
+    // default is false
+    enabled: (process.env.REPORT_GAS) ? true : false
   }
 };
