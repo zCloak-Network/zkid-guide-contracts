@@ -1,18 +1,23 @@
 const fs = require("fs");
 const { ethers } = require('hardhat');
-const { expect, assert } = require('chai');
+const { expect } = require('chai');
+
+const {
+    submit,
+    addProof,
+    authControl,
+    deployCommon,
+    deployMockRepution,
+    deployMockSAggregator
+} = require("./contract.behaviour");
 
 const {
     cType,
     fieldName,
     programHash,
-    newProgramHash,
-    proofCid,
-    newProofCid,
-    rootHash,
-    expectResult,
-    isPassed_t,
-    isPassed_f
+    attester,
+    proofInfo,
+    submitInfo
 } = require("./testVariables.js");
 
 describe('Reputation Contract', function () {
@@ -33,11 +38,9 @@ describe('Reputation Contract', function () {
 
     // character
     let owner;
-    let user;
+    let user1;
     let keeper1;
     let keeper2;
-    let attester = ethers.utils.formatBytes32String("attester");
-    let kiltAccount = ethers.utils.formatBytes32String("kiltAccount");
     let project;
 
     // variable
@@ -51,48 +54,22 @@ describe('Reputation Contract', function () {
 
     beforeEach(async function () {
 
-        [ owner, user, keeper1, keeper2, project ] = await ethers.getSigners();
+        [ owner, user1, keeper1, keeper2, project ] = await ethers.getSigners();
         let keepers = [ keeper1.address, keeper2.address ];
         sourceFile = fs.readFileSync('../artifacts/contracts/test/MockERC1363.sol/MockERC1363.json');
         source = JSON.parse(sourceFile);
         abi = source.abi;
-
-        const Registry = await ethers.getContractFactory('Registry', owner);
-        const Properties = await ethers.getContractFactory('Properties', owner);
-        const AddressesUtils = await ethers.getContractFactory('AddressesUtils', owner);
-        const Bytes32sUtils = await ethers.getContractFactory("Bytes32sUtils", owner);
-        const ProofStorage = await ethers.getContractFactory("ProofStorage", owner);
-        const RAC = await ethers.getContractFactory('ReadAccessController', owner);
-        const RACAuth = await ethers.getContractFactory("RACAuth", owner);
-        const ReputationAuth = await ethers.getContractFactory("ReputationAuth", owner);
-        const SimpleAggregatorAuth = await ethers.getContractFactory("SimpleAggregatorAuth", owner);
-
-        registry = await Registry.deploy();
-        await registry.deployed();
-
-        property = await Properties.deploy();
-        await property.deployed();
-
-        addressesUtils = await AddressesUtils.deploy();
-        await addressesUtils.deployed();
-
-        bytes32sUtils = await Bytes32sUtils.deploy();
-        await bytes32sUtils.deployed();
-
-        proof = await ProofStorage.deploy(registry.address);
-        await proof.deployed();
-
-        rac = await RAC.deploy(registry.address);
-        await rac.deployed();
-
-        racAuth = await RACAuth.deploy(registry.address);
-        await racAuth.deployed();
-
-        reputationAuth = await ReputationAuth.deploy(registry.address);
-        await reputationAuth.deployed();
-
-        sAggregatorAuth = await SimpleAggregatorAuth.deploy(keepers, registry.address);
-        await sAggregatorAuth.deployed();
+        
+        let res = await deployCommon(owner, keepers, registry, property, addressesUtils, bytes32sUtils, proof, rac, racAuth, reputationAuth, sAggregatorAuth);
+        registry = res.registry;
+        property = res.property;
+        addressesUtils = res.addressesUtils;
+        bytes32sUtils = res.bytes32sUtils;
+        proof = res.proof;
+        rac = res.rac;
+        racAuth = res.racAuth;
+        reputationAuth = res.reputationAuth;
+        sAggregatorAuth = res.sAggregatorAuth;
 
         // token contract
         const MyTokenA = await ethers.getContractFactory('MockERC1363', project);
@@ -106,27 +83,11 @@ describe('Reputation Contract', function () {
         MTKB = new ethers.Contract(mockMTKB.address, abi, project);
 
         // library linking contract
-        const MockReputation = await ethers.getContractFactory('MockReputation', {
-            libraries: {
-                AddressesUtils: addressesUtils.address
-            }
-        }, owner);
-        mockReputation = await MockReputation.deploy(registry.address);
-        await mockReputation.deployed();
-
-        const MockSAggregator = await ethers.getContractFactory("MockSimpleAggregator", {
-            libraries: {
-                AddressesUtils: addressesUtils.address,
-                Bytes32sUtils: bytes32sUtils.address,
-            },
-        }, owner);
-        mockSAggregator = await MockSAggregator.deploy(registry.address);
-        await mockSAggregator.deployed();
+        mockReputation = await deployMockRepution(owner, mockReputation, addressesUtils, registry);
+        mockSAggregator = await deployMockSAggregator(owner, mockSAggregator, addressesUtils, bytes32sUtils, registry);
 
         // AuthControl setting
-        await rac.setAuthority(racAuth.address);
-        await mockSAggregator.setAuthority(sAggregatorAuth.address);
-        await mockReputation.setAuthority(reputationAuth.address);
+        await authControl(rac, racAuth, mockSAggregator, sAggregatorAuth, mockReputation, reputationAuth);
 
         // Registry setting
         await registry.setUint32Property(property.UINT32_THRESHOLD(), 1);
@@ -138,17 +99,8 @@ describe('Reputation Contract', function () {
         await registry.setAddressProperty(property.CONTRACT_READ_GATEWAY(), rac.address);
 
         // user1 add proof first
-        await proof.connect(user).addProof(
-            kiltAccount,
-            attester,
-            cType,
-            fieldName,
-            programHash,
-            proofCid,
-            rootHash,
-            expectResult
-        );
-
+        await addProof(proof, user1, proofInfo);
+        
         // keeper add token in payments
         tokens = [MTKA.address, MTKB.address];
         requestHash = await rac.getRequestHash({
@@ -160,15 +112,7 @@ describe('Reputation Contract', function () {
         txAdd = await mockReputation.connect(keeper1).batchAdd(requestHash, tokens);
 
         // keeper submit verification result
-        await mockSAggregator.connect(keeper1).submit(
-            user.address,
-            requestHash,
-            cType,
-            rootHash,
-            isPassed_t,
-            attester,
-            expectResult
-        );
+        await submit(mockSAggregator, [keeper1], user1, requestHash, [true], submitInfo);
 
         // set meter
         await rac.connect(owner).applyRequest(
@@ -178,7 +122,7 @@ describe('Reputation Contract', function () {
             ethers.utils.parseEther('2.0')
         );
 
-        const data = ethers.utils.hexZeroPad(user.address, 32) + requestHash.replace('0x', '');
+        const data = ethers.utils.hexZeroPad(user1.address, 32) + requestHash.replace('0x', '');
         // project recharge 10 MTKAs to reward pool
         await MTKA.connect(project)['transferAndCall(address,uint256,bytes)'](
             rac.address,

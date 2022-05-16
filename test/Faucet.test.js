@@ -1,5 +1,5 @@
 const { ethers } = require('hardhat');
-const { assert, expect } = require('chai');
+const { expect } = require('chai');
 
 describe("Faucet", function () {
     let faucet;

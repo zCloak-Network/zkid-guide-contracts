@@ -6,6 +6,11 @@ const sourceFile = fs.readFileSync('../artifacts/contracts/test/MockERC1363.sol/
 const source = JSON.parse(sourceFile);
 const abi = source.abi;
 
+const {
+    deployMockRepution,
+    deployMockSAggregator
+} = require("./contract.behaviour");
+
 describe("MockERC1363(no callback, no param 'data')", function () {
     let registry;
     let properties;
@@ -51,22 +56,8 @@ describe("MockERC1363(no callback, no param 'data')", function () {
         await mock.deployed();
 
         // library linking
-        const MockReputation = await ethers.getContractFactory('MockReputation', {
-            libraries: {
-                AddressesUtils: addressesUtils.address
-            }
-        }, owner);
-        mockReputation = await MockReputation.deploy(registry.address);
-        await mockReputation.deployed();
-
-        const MockSAggregator = await ethers.getContractFactory("MockSimpleAggregator", {
-            libraries: {
-                AddressesUtils: addressesUtils.address,
-                Bytes32sUtils: bytes32sUtils.address,
-            },
-        }, owner);
-        mockSAggregator = await MockSAggregator.deploy(registry.address);
-        await mockSAggregator.deployed();
+        mockReputation = await deployMockRepution(owner, mockReputation, addressesUtils, registry);
+        mockSAggregator = await deployMockSAggregator(owner, mockSAggregator, addressesUtils, bytes32sUtils, registry);
 
         // ERC1363 contract is our token
         erc1363 = new ethers.Contract(mock.address, abi, owner);

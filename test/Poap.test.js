@@ -1,23 +1,30 @@
 const { ethers } = require('hardhat');
-const { assert, expect } = require('chai');
+const { expect } = require('chai');
+
+const {
+    submit,
+    addProof,
+    authControl,
+    deployCommon,
+    deployMockRepution,
+    deployMockSAggregator
+} = require("./contract.behaviour");
 
 const {
     cType,
     fieldName,
     programHash,
-    newProgramHash,
-    proofCid,
-    newProofCid,
     rootHash,
     expectResult,
     isPassed_t,
-    isPassed_f,
-    blankBytes20
+    attester,
+    proofInfo,
+    submitInfo
 } = require("./testVariables.js");
 
-describe("Faucet", function () {
+describe("Poap", function () {
     let registry;
-    let properties;
+    let property;
     let addressesUtils;
     let bytes32sUtils;
     let proof;
@@ -40,54 +47,27 @@ describe("Faucet", function () {
 
     let tx;
     let uri = 'test';
-    let rHash;
-    let oHash;
-    let attester = ethers.utils.formatBytes32String("attester");
-    let kiltAccount = ethers.utils.formatBytes32String("kiltAccount");
+    let requestHash;
+    let outputHash;
 
     beforeEach(async function () {
         [owner, user1, project, keeper1, keeper2, keeper3] = await ethers.getSigners();
         let keepers = [keeper1.address, keeper2.address, keeper3.address];
 
-        const Registry = await ethers.getContractFactory('Registry', owner);
-        const Properties = await ethers.getContractFactory('Properties', owner);
-        const AddressesUtils = await ethers.getContractFactory('AddressesUtils', owner);
-        const Bytes32sUtils = await ethers.getContractFactory("Bytes32sUtils", owner);
-        const ProofStorage = await ethers.getContractFactory("ProofStorage", owner);
-        const RAC = await ethers.getContractFactory('ReadAccessController', owner);
-        const RACAuth = await ethers.getContractFactory("RACAuth", owner);
-        const ReputationAuth = await ethers.getContractFactory("ReputationAuth", owner);
-        const SimpleAggregatorAuth = await ethers.getContractFactory("SimpleAggregatorAuth", owner);
+        let res = await deployCommon(owner, keepers, registry, property, addressesUtils, bytes32sUtils, proof, rac, racAuth, reputationAuth, sAggregatorAuth);
+        registry = res.registry;
+        property = res.property;
+        addressesUtils = res.addressesUtils;
+        bytes32sUtils = res.bytes32sUtils;
+        proof = res.proof;
+        rac = res.rac;
+        racAuth = res.racAuth;
+        reputationAuth = res.reputationAuth;
+        sAggregatorAuth = res.sAggregatorAuth;
 
         const Faucet = await ethers.getContractFactory('Faucet', owner);
-        const PoapFactory = await ethers.getContractFactory('PoapFactory', owner);
-
-        registry = await Registry.deploy();
-        await registry.deployed();
-
-        properties = await Properties.deploy();
-        await properties.deployed();
-
-        addressesUtils = await AddressesUtils.deploy();
-        await addressesUtils.deployed();
-
-        bytes32sUtils = await Bytes32sUtils.deploy();
-        await bytes32sUtils.deployed();
-
-        proof = await ProofStorage.deploy(registry.address);
-        await proof.deployed();
-
-        rac = await RAC.deploy(registry.address);
-        await rac.deployed();
-
-        racAuth = await RACAuth.deploy(registry.address);
-        await racAuth.deployed();
-
-        reputationAuth = await ReputationAuth.deploy(registry.address);
-        await reputationAuth.deployed();
-
-        sAggregatorAuth = await SimpleAggregatorAuth.deploy(keepers, registry.address);
-        await sAggregatorAuth.deployed();
+        // const PoapFactory = await ethers.getContractFactory('PoapFactory', owner);
+        const PoapFactory = await ethers.getContractFactory('MockPoapFactory', owner);
 
         faucet = await Faucet.deploy();
         await faucet.deployed();
@@ -96,22 +76,8 @@ describe("Faucet", function () {
         await factory.deployed();
 
         // library linking contract
-        const MockReputation = await ethers.getContractFactory("MockReputation", {
-            libraries: {
-                AddressesUtils: addressesUtils.address
-            }
-        }, owner);
-        mockReputation = await MockReputation.deploy(registry.address);
-        await mockReputation.deployed();
-
-        const MockSAggregator = await ethers.getContractFactory("MockSimpleAggregator", {
-            libraries: {
-                AddressesUtils: addressesUtils.address,
-                Bytes32sUtils: bytes32sUtils.address,
-            },
-        }, owner);
-        mockSAggregator = await MockSAggregator.deploy(registry.address);
-        await mockSAggregator.deployed();
+        mockReputation = await deployMockRepution(owner, mockReputation, addressesUtils, registry);
+        mockSAggregator = await deployMockSAggregator(owner, mockSAggregator, addressesUtils, bytes32sUtils, registry);
 
         tx = await owner.sendTransaction({
             to: faucet.address,
@@ -120,52 +86,40 @@ describe("Faucet", function () {
         await tx.wait();
 
         // calculate hash variable
-        rHash = await rac.getRequestHash({
+        requestHash = await rac.getRequestHash({
             cType: cType,
             fieldNames: fieldName,
             programHash: programHash,
             attester: attester
         });
-        oHash = await mockSAggregator.getOutputHash(rootHash, expectResult, isPassed_t, attester);
+        outputHash = await mockSAggregator.getOutputHash(rootHash, expectResult, isPassed_t, attester);
 
         // attach an nft contract
-        await factory.newPoap(rHash, uri);
+        await factory.newPoap(requestHash, uri);
         const ZcloakPoap = await ethers.getContractFactory('ZCloakPoap', owner);
-        poap = ZcloakPoap.attach(await factory.connect(user1).rh2poaps(rHash));
+        poap = ZcloakPoap.attach(await factory.connect(user1).rh2poaps(requestHash));
 
         // AuthControl setting
-        await rac.setAuthority(racAuth.address);
-        await mockSAggregator.setAuthority(sAggregatorAuth.address);
-        await mockReputation.setAuthority(reputationAuth.address);
+        await authControl(rac, racAuth, mockSAggregator, sAggregatorAuth, mockReputation, reputationAuth);
 
         // registry setting
-        await registry.setUint32Property(properties.UINT32_THRESHOLD(), 2);
-        await registry.setAddressProperty(properties.CONTRACT_REQUEST(), rac.address);
-        await registry.setAddressProperty(properties.CONTRACT_MAIN_KILT(), proof.address);
-        await registry.setAddressProperty(properties.CONTRACT_REPUTATION(), mockReputation.address);
-        await registry.setAddressProperty(properties.CONTRACT_POAP_FACTORY(), factory.address);
-        await registry.setAddressProperty(properties.CONTRACT_READ_GATEWAY(), rac.address);
-        await registry.setAddressProperty(properties.CONTRACT_AGGREGATOR(), mockSAggregator.address);
+        await registry.setUint32Property(property.UINT32_THRESHOLD(), 2);
+        await registry.setAddressProperty(property.CONTRACT_REQUEST(), rac.address);
+        await registry.setAddressProperty(property.CONTRACT_MAIN_KILT(), proof.address);
+        await registry.setAddressProperty(property.CONTRACT_REPUTATION(), mockReputation.address);
+        await registry.setAddressProperty(property.CONTRACT_POAP_FACTORY(), factory.address);
+        await registry.setAddressProperty(property.CONTRACT_READ_GATEWAY(), rac.address);
+        await registry.setAddressProperty(property.CONTRACT_AGGREGATOR(), mockSAggregator.address);
 
         // owner set super auth to poap contract
         await rac.superAuth(poap.address, true);
 
         // user1 add proof first
-        await proof.connect(user1).addProof(
-            kiltAccount,
-            attester,
-            cType,
-            fieldName,
-            programHash,
-            proofCid,
-            rootHash,
-            expectResult
-        );
+        await addProof(proof, user1, proofInfo);
 
         // keeper submit verification result
-        await mockSAggregator.connect(keeper1).submit(user1.address, rHash, cType, rootHash, isPassed_f, attester, expectResult);
-        await mockSAggregator.connect(keeper2).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
-        await mockSAggregator.connect(keeper3).submit(user1.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
+        await submit(mockSAggregator, [keeper1,keeper2,keeper3], user1, requestHash, [false,true,true], submitInfo);
+
     });
 
     describe('ZCloakPoap', function () {
@@ -177,27 +131,10 @@ describe("Faucet", function () {
             expect(await poap.totalBalanceOf(popaIdendifier, user1.address)).to.equal(1);
         });
 
-        it("pause() => unpause() => _beforeTokenTransfer(address,address,address,uint256[],uint256[],bytes):  call burn successfully", async function () {
-            // variable
-            let nftId = await poap.getNftId(popaIdendifier);
-
-            // user claim NFT first
-            await poap.connect(user1).claim();
-            expect(await poap.totalBalanceOf(popaIdendifier, user1.address)).to.equal(1);
-
+        it("pause(): should revert if calling factory.pause", async function () {
             // '_paused' variable has been set as true in poap contract's constructor
             await expect(factory.pause(poap.address))
                 .to.be.revertedWith("Pausable: paused");
-
-            // pause => cannot burn => unpause => can burn
-            await expect(poap.connect(user1).burnOne())
-                .to.be.revertedWith("ERC1155Pausable: token transfer while paused");
-
-            await factory.unpause(poap.address);
-            // await poap.connect(user1).burnOne();
-            await expect(poap.connect(user1).burnOne())
-                .to.emit(poap, 'TransferSingle')
-                .withArgs(user1.address, user1.address, blankBytes20, nftId, 1);
         });
     });
 

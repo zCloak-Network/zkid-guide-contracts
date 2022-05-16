@@ -3,16 +3,20 @@ const { ethers } = require('hardhat');
 const { expect } = require('chai');
 
 const {
+    submit,
+    addProof,
+    authControl,
+    deployCommon,
+    deployMockRepution,
+    deployMockSAggregator
+} = require("./contract.behaviour");
+
+const {
     cType,
     fieldName,
     programHash,
-    newProgramHash,
-    proofCid,
-    newProofCid,
-    rootHash,
-    expectResult,
-    isPassed_t,
-    isPassed_f
+    proofInfo,
+    submitInfo
 } = require("./testVariables.js");
 
 describe('Reputation Contract API', function () {
@@ -33,7 +37,7 @@ describe('Reputation Contract API', function () {
 
     // character
     let owner;
-    let user;
+    let user1;
     let keeper1;
     let keeper2;
     let keeper3;
@@ -42,7 +46,7 @@ describe('Reputation Contract API', function () {
     let project;
 
     // variable
-    let rHash;
+    let requestHash;
     let data;
     let tokens;
 
@@ -52,48 +56,22 @@ describe('Reputation Contract API', function () {
 
     beforeEach(async function () {
 
-        [owner, user, keeper1, keeper2, keeper3, project] = await ethers.getSigners();
+        [owner, user1, keeper1, keeper2, keeper3, project] = await ethers.getSigners();
         let keepers = [keeper1.address, keeper2.address, keeper3.address];
         sourceFile = fs.readFileSync('../artifacts/contracts/test/MockERC1363.sol/MockERC1363.json');
         source = JSON.parse(sourceFile);
         abi = source.abi;
 
-        const Registry = await ethers.getContractFactory('Registry', owner);
-        const Properties = await ethers.getContractFactory('Properties', owner);
-        const AddressesUtils = await ethers.getContractFactory('AddressesUtils', owner);
-        const Bytes32sUtils = await ethers.getContractFactory("Bytes32sUtils", owner);
-        const ProofStorage = await ethers.getContractFactory("ProofStorage", owner);
-        const RAC = await ethers.getContractFactory('ReadAccessController', owner);
-        const RACAuth = await ethers.getContractFactory("RACAuth", owner);
-        const ReputationAuth = await ethers.getContractFactory("ReputationAuth", owner);
-        const SimpleAggregatorAuth = await ethers.getContractFactory("SimpleAggregatorAuth", owner);
-
-        registry = await Registry.deploy();
-        await registry.deployed();
-
-        property = await Properties.deploy();
-        await property.deployed();
-
-        addressesUtils = await AddressesUtils.deploy();
-        await addressesUtils.deployed();
-
-        bytes32sUtils = await Bytes32sUtils.deploy();
-        await bytes32sUtils.deployed();
-
-        proof = await ProofStorage.deploy(registry.address);
-        await proof.deployed();
-
-        rac = await RAC.deploy(registry.address);
-        await rac.deployed();
-
-        racAuth = await RACAuth.deploy(registry.address);
-        await racAuth.deployed();
-
-        reputationAuth = await ReputationAuth.deploy(registry.address);
-        await reputationAuth.deployed();
-
-        sAggregatorAuth = await SimpleAggregatorAuth.deploy(keepers, registry.address);
-        await sAggregatorAuth.deployed();
+        let res = await deployCommon(owner, keepers, registry, property, addressesUtils, bytes32sUtils, proof, rac, racAuth, reputationAuth, sAggregatorAuth);
+        registry = res.registry;
+        property = res.property;
+        addressesUtils = res.addressesUtils;
+        bytes32sUtils = res.bytes32sUtils;
+        proof = res.proof;
+        rac = res.rac;
+        racAuth = res.racAuth;
+        reputationAuth = res.reputationAuth;
+        sAggregatorAuth = res.sAggregatorAuth;
 
         // token contract
         const MyTokenA = await ethers.getContractFactory('MockERC1363', project);
@@ -107,27 +85,11 @@ describe('Reputation Contract API', function () {
         MTKB = new ethers.Contract(mockMTKB.address, abi, project);
 
         // library linking contract
-        const MockReputation = await ethers.getContractFactory('MockReputation', {
-            libraries: {
-                AddressesUtils: addressesUtils.address
-            }
-        }, owner);
-        mockReputation = await MockReputation.deploy(registry.address);
-        await mockReputation.deployed();
-
-        const MockSAggregator = await ethers.getContractFactory("MockSimpleAggregator", {
-            libraries: {
-                AddressesUtils: addressesUtils.address,
-                Bytes32sUtils: bytes32sUtils.address,
-            },
-        }, owner);
-        mockSAggregator = await MockSAggregator.deploy(registry.address);
-        await mockSAggregator.deployed();
+        mockReputation = await deployMockRepution(owner, mockReputation, addressesUtils, registry);
+        mockSAggregator = await deployMockSAggregator(owner, mockSAggregator, addressesUtils, bytes32sUtils, registry);
 
         // AuthControl setting
-        await rac.setAuthority(racAuth.address);
-        await mockSAggregator.setAuthority(sAggregatorAuth.address);
-        await mockReputation.setAuthority(reputationAuth.address);
+        await authControl(rac, racAuth, mockSAggregator, sAggregatorAuth, mockReputation, reputationAuth);
 
         // Registry setting
         await registry.setUint32Property(property.UINT32_THRESHOLD(), 2);
@@ -139,43 +101,27 @@ describe('Reputation Contract API', function () {
         await registry.setAddressProperty(property.CONTRACT_READ_GATEWAY(), rac.address);
 
         // set variable
-        rHash = await rac.getRequestHash({
+        requestHash = await rac.getRequestHash({
             cType: cType,
             fieldNames: fieldName,
             programHash: programHash,
             attester: attester
         });
-        data = ethers.utils.hexZeroPad(user.address, 32) + rHash.replace('0x', '');
+        data = ethers.utils.hexZeroPad(user1.address, 32) + requestHash.replace('0x', '');
 
         // user1 add proof first
-        await proof.connect(user).addProof(
-            kiltAccount,
-            attester,
-            cType,
-            fieldName,
-            programHash,
-            proofCid,
-            rootHash,
-            expectResult
-        );
+        await addProof(proof, user1, proofInfo);
         
     });
 
     describe("No added token before keeper submit(need transformReputation)", function () {
         beforeEach(async function () {
             // keeper submit verification result
-            await mockSAggregator.connect(keeper1)
-                .submit(user.address, rHash, cType, rootHash, isPassed_f, attester, expectResult);
-
-            await mockSAggregator.connect(keeper2)
-                .submit(user.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
-
-            await mockSAggregator.connect(keeper3)
-                .submit(user.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
+            await submit(mockSAggregator, [ keeper1, keeper2, keeper3 ], user1, requestHash, [ false, true, true ], submitInfo);
 
             // set meter
             await rac.connect(owner).applyRequest(
-                rHash,
+                requestHash,
                 project.address,
                 MTKA.address,
                 ethers.utils.parseEther('2.0')
@@ -190,13 +136,13 @@ describe('Reputation Contract API', function () {
 
             // keeper add token in payments
             tokens = [MTKA.address, MTKB.address];
-            await mockReputation.connect(keeper1).batchAdd(rHash, tokens);
+            await mockReputation.connect(keeper1).batchAdd(requestHash, tokens);
         });
 
         it("claimToken(bytes32,address): bad and good keeper can not claim token(no individualReputation)", async function () {
-            await mockReputation.connect(keeper1).claimToken(rHash, MTKA.address);
-            await mockReputation.connect(keeper2).claimToken(rHash, MTKA.address);
-            await mockReputation.connect(keeper3).claimToken(rHash, MTKA.address);
+            await mockReputation.connect(keeper1).claimToken(requestHash, MTKA.address);
+            await mockReputation.connect(keeper2).claimToken(requestHash, MTKA.address);
+            await mockReputation.connect(keeper3).claimToken(requestHash, MTKA.address);
             expect(await MTKA.balanceOf(keeper1.address)).to.equal(0);
             expect(await MTKA.balanceOf(keeper2.address)).to.equal(0);
             expect(await MTKA.balanceOf(keeper3.address)).to.equal(0);
@@ -204,41 +150,41 @@ describe('Reputation Contract API', function () {
 
         it("transformReputation(bytes32): call successfullly", async function () {
             // check communityReputations
-            expect(await mockReputation.getCReputations(rHash, keeper1.address)).to.equal(-1);
-            expect(await mockReputation.getCReputations(rHash, keeper2.address)).to.equal(1);
-            expect(await mockReputation.getCReputations(rHash, keeper3.address)).to.equal(2);
+            expect(await mockReputation.getCReputations(requestHash, keeper1.address)).to.equal(-1);
+            expect(await mockReputation.getCReputations(requestHash, keeper2.address)).to.equal(1);
+            expect(await mockReputation.getCReputations(requestHash, keeper3.address)).to.equal(2);
 
-            await mockReputation.connect(keeper1).transformReputation(rHash);
-            await mockReputation.connect(keeper2).transformReputation(rHash);
-            await mockReputation.connect(keeper3).transformReputation(rHash);
+            await mockReputation.connect(keeper1).transformReputation(requestHash);
+            await mockReputation.connect(keeper2).transformReputation(requestHash);
+            await mockReputation.connect(keeper3).transformReputation(requestHash);
 
             // check communityReputations
-            expect(await mockReputation.getCReputations(rHash, keeper1.address)).to.equal(0);
-            expect(await mockReputation.getCReputations(rHash, keeper2.address)).to.equal(0);
-            expect(await mockReputation.getCReputations(rHash, keeper3.address)).to.equal(0);
+            expect(await mockReputation.getCReputations(requestHash, keeper1.address)).to.equal(0);
+            expect(await mockReputation.getCReputations(requestHash, keeper2.address)).to.equal(0);
+            expect(await mockReputation.getCReputations(requestHash, keeper3.address)).to.equal(0);
 
             // check individualReputation
-            expect(await mockReputation.getIRutationPoint(rHash, keeper1.address)).to.equal(-1);
-            expect(await mockReputation.getIRutationPoint(rHash, keeper2.address)).to.equal(1);
-            expect(await mockReputation.getIRutationPoint(rHash, keeper3.address)).to.equal(2);
+            expect(await mockReputation.getIRutationPoint(requestHash, keeper1.address)).to.equal(-1);
+            expect(await mockReputation.getIRutationPoint(requestHash, keeper2.address)).to.equal(1);
+            expect(await mockReputation.getIRutationPoint(requestHash, keeper3.address)).to.equal(2);
         });
 
         it("Connectivity Test: first transformReputation last calimToken", async function () {
             // keeper transformReputation first
-            await mockReputation.connect(keeper1).transformReputation(rHash);
-            await mockReputation.connect(keeper2).transformReputation(rHash);
-            await mockReputation.connect(keeper3).transformReputation(rHash);
+            await mockReputation.connect(keeper1).transformReputation(requestHash);
+            await mockReputation.connect(keeper2).transformReputation(requestHash);
+            await mockReputation.connect(keeper3).transformReputation(requestHash);
 
             // keeper claimToken
-            await mockReputation.connect(keeper1).claimToken(rHash, MTKA.address);
-            await mockReputation.connect(keeper2).claimToken(rHash, MTKA.address);
-            await mockReputation.connect(keeper3).claimToken(rHash, MTKA.address);
+            await mockReputation.connect(keeper1).claimToken(requestHash, MTKA.address);
+            await mockReputation.connect(keeper2).claimToken(requestHash, MTKA.address);
+            await mockReputation.connect(keeper3).claimToken(requestHash, MTKA.address);
 
             // check keeper balance
             expect(await MTKA.balanceOf(keeper1.address)).to.equal(0);
             expect(await MTKA.balanceOf(keeper2.address)).to.equal(ethers.utils.parseEther('6.0'));
             expect(await MTKA.balanceOf(keeper3.address)).to.equal(ethers.utils.parseEther('6.0'));
-            expect(await mockReputation.getRemainingAssets(rHash, MTKA.address)).to.equal(0);
+            expect(await mockReputation.getRemainingAssets(requestHash, MTKA.address)).to.equal(0);
 
         });
 
@@ -251,22 +197,15 @@ describe('Reputation Contract API', function () {
 
         beforeEach(async function () {
             // keeper add token in payments
-            txA = await mockReputation.addToken(rHash, MTKA.address);
-            txB = await mockReputation.addToken(rHash, MTKB.address);
+            txA = await mockReputation.addToken(requestHash, MTKA.address);
+            txB = await mockReputation.addToken(requestHash, MTKB.address);
 
             // keeper submit verification result
-            await mockSAggregator.connect(keeper1)
-                .submit(user.address, rHash, cType, rootHash, isPassed_f, attester, expectResult);
-
-            await mockSAggregator.connect(keeper2)
-                .submit(user.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
-
-            await mockSAggregator.connect(keeper3)
-                .submit(user.address, rHash, cType, rootHash, isPassed_t, attester, expectResult);
+            await submit(mockSAggregator, [ keeper1, keeper2, keeper3 ], user1, requestHash, [ false, true, true ], submitInfo);
 
             // set MTKA meter and recharge 12 ether MTKAs to reward pool
             await rac.connect(owner).applyRequest(
-                rHash,
+                requestHash,
                 project.address,
                 MTKA.address,
                 ethers.utils.parseEther('2.0')
@@ -279,7 +218,7 @@ describe('Reputation Contract API', function () {
 
             // set MTKB meter and recharge 12 ether MTKBs to reward pool
             await rac.connect(owner).applyRequest(
-                rHash,
+                requestHash,
                 project.address,
                 MTKB.address,
                 ethers.utils.parseEther('2.0')
@@ -294,8 +233,8 @@ describe('Reputation Contract API', function () {
 
         it("addToken(bytes32,address): call addToken successfully", async function () {
             // check token
-            expect(await mockReputation.getToken(rHash, 0)).to.equal(MTKA.address);
-            expect(await mockReputation.getToken(rHash, 1)).to.equal(MTKB.address);
+            expect(await mockReputation.getToken(requestHash, 0)).to.equal(MTKA.address);
+            expect(await mockReputation.getToken(requestHash, 1)).to.equal(MTKB.address);
 
             // check event emiting
             expect(txA).to.emit(mockReputation, 'Add').withArgs(MTKA.address, owner.address);
@@ -304,18 +243,18 @@ describe('Reputation Contract API', function () {
 
         it("claimToken(bytes32,address): bad and good keeper successfully claim", async function () {
             // check individualReputation
-            expect(await mockReputation.getIRutationPoint(rHash, keeper1.address)).to.equal(-1);
-            expect(await mockReputation.getIRutationPoint(rHash, keeper2.address)).to.equal(1);
-            expect(await mockReputation.getIRutationPoint(rHash, keeper3.address)).to.equal(2);
+            expect(await mockReputation.getIRutationPoint(requestHash, keeper1.address)).to.equal(-1);
+            expect(await mockReputation.getIRutationPoint(requestHash, keeper2.address)).to.equal(1);
+            expect(await mockReputation.getIRutationPoint(requestHash, keeper3.address)).to.equal(2);
 
             // keeper claimToken
-            await mockReputation.connect(keeper1).claimToken(rHash, MTKA.address);
+            await mockReputation.connect(keeper1).claimToken(requestHash, MTKA.address);
 
-            await mockReputation.connect(keeper2).claimToken(rHash, MTKA.address);
-            expect(await mockReputation.getRemainingAssets(rHash, MTKA.address)).to.equal(ethers.utils.parseEther('6.0'));
+            await mockReputation.connect(keeper2).claimToken(requestHash, MTKA.address);
+            expect(await mockReputation.getRemainingAssets(requestHash, MTKA.address)).to.equal(ethers.utils.parseEther('6.0'));
 
-            await mockReputation.connect(keeper3).claimToken(rHash, MTKA.address);
-            expect(await mockReputation.getRemainingAssets(rHash, MTKA.address)).to.equal(0);
+            await mockReputation.connect(keeper3).claimToken(requestHash, MTKA.address);
+            expect(await mockReputation.getRemainingAssets(requestHash, MTKA.address)).to.equal(0);
 
             // check keeper balance
             expect(await MTKA.balanceOf(keeper1.address)).to.equal(0);
@@ -324,17 +263,17 @@ describe('Reputation Contract API', function () {
         });
 
         it("batchClaim(bytes32): keeper batch claim MTKA and MTKB", async function () {
-            await mockReputation.connect(keeper1).batchClaim(rHash);
+            await mockReputation.connect(keeper1).batchClaim(requestHash);
 
-            await mockReputation.connect(keeper2).batchClaim(rHash);
-            expect(await mockReputation.getRemainingAssets(rHash, MTKA.address)).to.equal(ethers.utils.parseEther('6.0'));
-            expect(await mockReputation.getRemainingAssets(rHash, MTKB.address)).to.equal(ethers.utils.parseEther('6.0'));
+            await mockReputation.connect(keeper2).batchClaim(requestHash);
+            expect(await mockReputation.getRemainingAssets(requestHash, MTKA.address)).to.equal(ethers.utils.parseEther('6.0'));
+            expect(await mockReputation.getRemainingAssets(requestHash, MTKB.address)).to.equal(ethers.utils.parseEther('6.0'));
 
-            await expect(mockReputation.connect(keeper3).batchClaim(rHash))
+            await expect(mockReputation.connect(keeper3).batchClaim(requestHash))
                 .to.emit(mockReputation, 'BatchClaim')
-                .withArgs(rHash, keeper3.address);
-            expect(await mockReputation.getRemainingAssets(rHash, MTKB.address)).to.equal(0);
-            expect(await mockReputation.getRemainingAssets(rHash, MTKB.address)).to.equal(0);
+                .withArgs(requestHash, keeper3.address);
+            expect(await mockReputation.getRemainingAssets(requestHash, MTKB.address)).to.equal(0);
+            expect(await mockReputation.getRemainingAssets(requestHash, MTKB.address)).to.equal(0);
 
             // check keeper balance
             expect(await MTKA.balanceOf(keeper1.address)).to.equal(0);
@@ -355,9 +294,9 @@ describe('Reputation Contract API', function () {
         });
 
         it("withdrawable(bytes32,address,address): check keeper withdraw number", async function () {
-            expect(await mockReputation.withdrawable(rHash, MTKA.address, keeper1.address)).to.equal(0);
-            expect(await mockReputation.withdrawable(rHash, MTKA.address, keeper2.address)).to.equal(ethers.utils.parseEther('6.0'));
-            expect(await mockReputation.withdrawable(rHash, MTKA.address, keeper3.address)).to.equal(ethers.utils.parseEther('12.0'));
+            expect(await mockReputation.withdrawable(requestHash, MTKA.address, keeper1.address)).to.equal(0);
+            expect(await mockReputation.withdrawable(requestHash, MTKA.address, keeper2.address)).to.equal(ethers.utils.parseEther('6.0'));
+            expect(await mockReputation.withdrawable(requestHash, MTKA.address, keeper3.address)).to.equal(ethers.utils.parseEther('12.0'));
         });
     });
 

@@ -2,6 +2,11 @@ const { ethers } = require('hardhat');
 const { expect, assert } = require('chai');
 
 const {
+    addProof,
+    deployMockSAggregator
+} = require("./contract.behaviour");
+
+const {
     cType,
     fieldName,
     programHash,
@@ -10,9 +15,9 @@ const {
     newProofCid,
     rootHash,
     expectResult,
-    blankField,
-    blankBytes20,
-    blankBytes32
+    blankBytes32,
+    attester,
+    proofInfo,
 } = require("./testVariables.js");
 
 describe("ProofStorage contract", function () {
@@ -21,10 +26,10 @@ describe("ProofStorage contract", function () {
     let proof;
     let rac;
     let racAuth;
-    let sa;
-    let saAuth;
+    let sAggregatorAuth;
     let addressesUtils;
     let bytes32sUtils;
+    let mockSAggregator;
 
     let owner;
     let user1;
@@ -32,13 +37,13 @@ describe("ProofStorage contract", function () {
     let keeper1;
     let keeper2;
     let keeper3;
-    let attester = ethers.utils.formatBytes32String("attester");
     let newAttester = ethers.utils.formatBytes32String('newAttester');
     let kiltAccount = ethers.utils.formatBytes32String("kiltAccount");
     let kiltAccountOther = ethers.utils.formatBytes32String("kiltAccountOther");
 
-    let rHash;
-    let rHashOther;
+    let requestHash;
+    let requestHashOther;
+    let txAddProof;
 
     beforeEach(async function () {
         [owner, user1, user2, keeper1, keeper2, keeper3] = await ethers.getSigners();
@@ -51,7 +56,7 @@ describe("ProofStorage contract", function () {
         const ProofStorage = await ethers.getContractFactory("MockProofStorage", owner);
         const RAC = await ethers.getContractFactory("MockRAC", owner);
         const RACAuth = await ethers.getContractFactory("RACAuth", owner);
-        const SAAuth = await ethers.getContractFactory("SimpleAggregatorAuth", owner);
+        const SimpleAggregatorAuth = await ethers.getContractFactory("SimpleAggregatorAuth", owner);
 
         registry = await Registry.deploy();
         await registry.deployed();
@@ -74,34 +79,25 @@ describe("ProofStorage contract", function () {
         racAuth = await RACAuth.deploy(registry.address);
         await racAuth.deployed();
 
-        saAuth = await SAAuth.deploy(keepers, registry.address);
-        await saAuth.deployed();
+        sAggregatorAuth = await SimpleAggregatorAuth.deploy(keepers, registry.address);
+        await sAggregatorAuth.deployed();
 
         // library linking
-        const MockSAggregator = await ethers.getContractFactory(
-            "MockSimpleAggregator",
-            {
-                libraries: {
-                    AddressesUtils: addressesUtils.address,
-                    Bytes32sUtils: bytes32sUtils.address,
-                },
-            },
-            owner
-        );
-        sa = await MockSAggregator.deploy(registry.address);
-        await sa.deployed();
+        mockSAggregator = await deployMockSAggregator(owner, mockSAggregator, addressesUtils, bytes32sUtils, registry);
 
         // AuthControl setting
         await rac.setAuthority(racAuth.address);
-        await sa.setAuthority(saAuth.address);
+        await mockSAggregator.setAuthority(sAggregatorAuth.address);
 
         // set regisry
-        await registry.setAddressProperty(properties.CONTRACT_AGGREGATOR(), sa.address);
+        await registry.setAddressProperty(properties.CONTRACT_AGGREGATOR(), mockSAggregator.address);
         await registry.setAddressProperty(properties.CONTRACT_REQUEST(), rac.address);
         await registry.setAddressProperty(properties.CONTRACT_MAIN_KILT(), proof.address);
 
-        rHash = await rac.getRequestHash({ cType: cType, fieldNames: fieldName, programHash: programHash, attester: attester });
-        rHashOther = await rac.getRequestHash({ cType: cType, fieldNames: fieldName, programHash: newProgramHash, attester: newAttester });
+        requestHash = await rac.getRequestHash({ cType: cType, fieldNames: fieldName, programHash: programHash, attester: attester });
+        requestHashOther = await rac.getRequestHash({ cType: cType, fieldNames: fieldName, programHash: newProgramHash, attester: newAttester });
+
+        // txAddProof = await addProof(proof, user1, proofInfo);
     });
 
     describe("Check value", function () {
@@ -119,22 +115,13 @@ describe("ProofStorage contract", function () {
     describe("User add proof", function () {
         it("user1 can add proof successfully", async function () {
             // storage should be non-empty
-            expect((await rac.requestInfo(rHash)).cType).to.equal(blankBytes32);
-            expect((await rac.requestInfo(rHash)).fieldName).to.equal(undefined);
-            expect((await rac.requestInfo(rHash)).programHash).to.equal(blankBytes32);
-            expect((await rac.requestInfo(rHash)).attester).to.equal(blankBytes32);
+            expect((await rac.requestInfo(requestHash)).cType).to.equal(blankBytes32);
+            expect((await rac.requestInfo(requestHash)).fieldName).to.equal(undefined);
+            expect((await rac.requestInfo(requestHash)).programHash).to.equal(blankBytes32);
+            expect((await rac.requestInfo(requestHash)).attester).to.equal(blankBytes32);
 
             // user1 add proof
-            const txAddProof = await proof.connect(user1).addProof(
-                kiltAccount,
-                attester,
-                cType,
-                fieldName,
-                programHash,
-                proofCid,
-                rootHash,
-                expectResult
-            );
+            txAddProof = await addProof(proof, user1, proofInfo);
 
             // check the event AddProof whether emit or not
             expect(txAddProof)
@@ -146,41 +133,32 @@ describe("ProofStorage contract", function () {
                     programHash,
                     fieldName,
                     proofCid,
-                    rHash,
+                    requestHash,
                     rootHash,
                     expectResult
                 );
 
             // check whether the proof exist or not
-            let proofExist = await proof.connect(user1).single_proof_exists(user1.address, rHash);
+            let proofExist = await proof.connect(user1).single_proof_exists(user1.address, requestHash);
             expect(proofExist).to.equal(true);
 
             // check the storage
-            assert((await rac.requestInfo(rHash)).cType, cType);
-            assert((await rac.getFieldName(rHash))[0], fieldName[0]);
-            assert((await rac.requestInfo(rHash)).programHash, programHash);
-            assert((await rac.requestInfo(rHash)).attester, attester);
+            assert((await rac.requestInfo(requestHash)).cType, cType);
+            assert((await rac.getFieldName(requestHash))[0], fieldName[0]);
+            assert((await rac.requestInfo(requestHash)).programHash, programHash);
+            assert((await rac.requestInfo(requestHash)).attester, attester);
 
             expect(await proof.kiltAddr2Addr(kiltAccount)).to.equal(user1.address);
-            expect(await proof.getProofCid(user1.address, rHash)).to.equal(proofCid);
-            expect(await proof.getCalcResult(user1.address, rHash, 0)).to.equal(expectResult[0]);
+            expect(await proof.getProofCid(user1.address, requestHash)).to.equal(proofCid);
+            expect(await proof.getCalcResult(user1.address, requestHash, 0)).to.equal(expectResult[0]);
         });
 
         it("Should fail if user readd the same proof", async function () {
             // user1 add proof
-            await proof.connect(user1).addProof(
-                kiltAccount,
-                attester,
-                cType,
-                fieldName,
-                programHash,
-                proofCid,
-                rootHash,
-                expectResult
-            );
+            await addProof(proof, user1, proofInfo);
 
             // proof should be added successfully
-            let proofExist = await proof.connect(user1).single_proof_exists(user1.address, rHash);
+            let proofExist = await proof.connect(user1).single_proof_exists(user1.address, requestHash);
             expect(proofExist).to.equal(true);
 
             // user1 add same proof again and revert the tx
@@ -192,62 +170,32 @@ describe("ProofStorage contract", function () {
     });
 
     describe("User update proof", function () {
-        it("Should success if same user uses another kiltAccount to update a new proof", async function () {
-            // user add a proof first
-            await proof.connect(user1).addProof(
-                kiltAccount,
-                attester,
-                cType,
-                fieldName,
-                programHash,
-                proofCid,
-                rootHash,
-                expectResult
-            );
-
-            // owner execute unPause
-            await proof.unPause();
-
-            await proof.connect(user1).updateProof(
-                kiltAccountOther,
-                rHash,
-                newProofCid,
-                rootHash,
-                expectResult
-            );
-            expect(await proof.kiltAddr2Addr(kiltAccountOther)).to.equal(user1.address);
-        });
-
-        it('should updateProof fail if owner switch off pause', async function () {
-            // user add a proof first
-            await proof.connect(user1).addProof(
-                kiltAccount,
-                attester,
-                cType,
-                fieldName,
-                programHash,
-                proofCid,
-                rootHash,
-                expectResult
-            );
+        beforeEach(async function () {
+            await addProof(proof, user1, proofInfo);
 
             // owner switch on pause
             await proof.unPause();
 
             await proof.connect(user1).updateProof(
                 kiltAccountOther,
-                rHash,
+                requestHash,
                 newProofCid,
                 rootHash,
                 expectResult
             );
+        });
 
+        it("Should success if same user uses another kiltAccount to update a new proof", async function () {
+            expect(await proof.kiltAddr2Addr(kiltAccountOther)).to.equal(user1.address);
+        });
+
+        it('should updateProof fail if owner switch off pause', async function () {
             // owner switch off pause
             await proof.pause();
 
             await expect(proof.connect(user1).updateProof(
                 kiltAccountOther,
-                rHash,
+                requestHash,
                 newProofCid,
                 rootHash,
                 expectResult
@@ -256,20 +204,11 @@ describe("ProofStorage contract", function () {
     });
 
     describe("Multi-user add proof", function () {
+        beforeEach(async function () {
+            await addProof(proof, user1, proofInfo);
+        });
 
         it("Should success if multi-user and their own proof", async function () {
-            // user1 add own proof
-            await proof.connect(user1).addProof(
-                kiltAccount,
-                attester,
-                cType,
-                fieldName,
-                programHash,
-                proofCid,
-                rootHash,
-                expectResult
-            );
-
             // user2 add own proof
             await proof.connect(user2).addProof(
                 kiltAccountOther,
@@ -283,38 +222,27 @@ describe("ProofStorage contract", function () {
             );
 
             // check user1's proof storage
-            assert((await rac.requestInfo(rHash)).cType, cType);
-            assert((await rac.getFieldName(rHash))[0], fieldName[0]);
-            assert((await rac.requestInfo(rHash)).programHash, programHash);
-            assert((await rac.requestInfo(rHash)).attester, attester);
+            assert((await rac.requestInfo(requestHash)).cType, cType);
+            assert((await rac.getFieldName(requestHash))[0], fieldName[0]);
+            assert((await rac.requestInfo(requestHash)).programHash, programHash);
+            assert((await rac.requestInfo(requestHash)).attester, attester);
 
             expect(await proof.kiltAddr2Addr(kiltAccount)).to.equal(user1.address);
-            expect(await proof.getProofCid(user1.address, rHash)).to.equal(proofCid);
-            expect(await proof.getCalcResult(user1.address, rHash, 0)).to.equal(expectResult[0]);
+            expect(await proof.getProofCid(user1.address, requestHash)).to.equal(proofCid);
+            expect(await proof.getCalcResult(user1.address, requestHash, 0)).to.equal(expectResult[0]);
 
             // check user2's proof storage
-            assert((await rac.requestInfo(rHashOther)).cType, cType);
-            assert((await rac.getFieldName(rHashOther))[0], fieldName[0]);
-            assert((await rac.requestInfo(rHashOther)).programHash, newProgramHash);
-            assert((await rac.requestInfo(rHashOther)).attester, attester);
+            assert((await rac.requestInfo(requestHashOther)).cType, cType);
+            assert((await rac.getFieldName(requestHashOther))[0], fieldName[0]);
+            assert((await rac.requestInfo(requestHashOther)).programHash, newProgramHash);
+            assert((await rac.requestInfo(requestHashOther)).attester, attester);
 
             expect(await proof.kiltAddr2Addr(kiltAccountOther)).to.equal(user2.address);
-            expect(await proof.getProofCid(user2.address, rHashOther)).to.equal(newProofCid);
-            expect(await proof.getCalcResult(user2.address, rHashOther, 0)).to.equal(expectResult[0]);
+            expect(await proof.getProofCid(user2.address, requestHashOther)).to.equal(newProofCid);
+            expect(await proof.getCalcResult(user2.address, requestHashOther, 0)).to.equal(expectResult[0]);
         });
 
         it("Should revert if user have two kiltAccount and add seme request proof", async function () {
-            await proof.connect(user1).addProof(
-                kiltAccount,
-                attester,
-                cType,
-                fieldName,
-                programHash,
-                proofCid,
-                rootHash,
-                expectResult
-            );
-
             await expect(proof.connect(user1).addProof(
                 kiltAccountOther,
                 attester,
