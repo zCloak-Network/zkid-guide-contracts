@@ -1,3 +1,7 @@
+// data info:
+// attester: ethers.utils.formatBytes32String("attester")
+// kiltAccount: ethers.utils.formatBytes32String("kiltAccount")
+
 // data
 let fieldName = [1];
 let cType = "0x7f2ef721b292b9b7d678e9f82ab010e139600558df805bbc61a0041e60b61a18";
@@ -16,6 +20,26 @@ let customThreshold = 2;
 let blankBytes20 = "0x0000000000000000000000000000000000000000";
 let blankField = "";
 let blankBytes32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
+let attester= "0x6174746573746572000000000000000000000000000000000000000000000000";
+let kiltAccount = "0x6b696c744163636f756e74000000000000000000000000000000000000000000";
+
+let proofInfo = {
+    kiltAccount: kiltAccount,
+    attester: attester,
+    cType: cType,
+    fieldName: fieldName,
+    programHash: programHash,
+    proofCid: proofCid,
+    rootHash: rootHash,
+    expectResult: expectResult
+};
+
+let submitInfo = {
+    cType: cType,
+    rootHash: rootHash,
+    attester: attester,
+    expectResult: expectResult
+};
 
 module.exports = {
     // data
@@ -35,5 +59,9 @@ module.exports = {
     customThreshold: customThreshold,
     blankBytes20: blankBytes20,
     blankField: blankField,
-    blankBytes32: blankBytes32
+    blankBytes32: blankBytes32,
+    attester: attester,
+    kiltAccount: kiltAccount,
+    proofInfo: proofInfo,
+    submitInfo: submitInfo
 }
