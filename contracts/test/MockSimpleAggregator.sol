@@ -30,6 +30,15 @@ contract MockSimpleAggregator is SimpleAggregator {
         return keepers.element(num);
     }
 
+    function getKeeperIndex(
+        address cOwner,
+        bytes32 requestHash,
+        address keeper
+    ) public view returns (uint256) {
+        AddressesUtils.Addresses storage keepers = keeperSubmissions[cOwner][requestHash];
+        return keepers.getAddressesIndex(keeper);
+    }
+
     function getVoterAddress(
         address user,
         bytes32 requestHash,
