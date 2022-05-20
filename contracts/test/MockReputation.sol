@@ -22,7 +22,7 @@ contract MockReputation is Reputation {
         return communityReputations[requestHash][keeper];
     }
 
-    function getIRutationPoint(bytes32 requestHash, address keeper)
+    function getIReputationPoint(bytes32 requestHash, address keeper)
         public
         view
         returns (int128)

@@ -97,7 +97,7 @@ describe("SimpleAggregator API check", function () {
             assert(await mockSAggregator.getVoteCount(user1.address, requestHash, outputHash), 1);
             assert(await mockSAggregator.getBytes32ListOutputHash(user1.address, requestHash, 0), outputHash);
             // check reputation storage value
-            expect((await mockReputation.getIRutationPoint(requestHash, keeper1.address)).toNumber())
+            expect((await mockReputation.getIReputationPoint(requestHash, keeper1.address)).toNumber())
                 .to.equal(0);
             expect((await mockReputation.getCReputations(requestHash, keeper1.address)).toNumber())
                 .to.equal(1);
@@ -111,7 +111,7 @@ describe("SimpleAggregator API check", function () {
                 .withArgs(
                     requestHash,
                     keeper1.address,
-                    await mockReputation.getIRutationPoint(requestHash, keeper1.address),
+                    await mockReputation.getIReputationPoint(requestHash, keeper1.address),
                     await mockReputation.getCReputations(requestHash, keeper1.address),
                     await mockReputation.getKeeperTotalReputations(keeper1.address)
                 );

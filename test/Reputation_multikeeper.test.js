@@ -164,9 +164,9 @@ describe('Reputation Contract API', function () {
             expect(await mockReputation.getCReputations(requestHash, keeper3.address)).to.equal(0);
 
             // check individualReputation
-            expect(await mockReputation.getIRutationPoint(requestHash, keeper1.address)).to.equal(-1);
-            expect(await mockReputation.getIRutationPoint(requestHash, keeper2.address)).to.equal(1);
-            expect(await mockReputation.getIRutationPoint(requestHash, keeper3.address)).to.equal(2);
+            expect(await mockReputation.getIReputationPoint(requestHash, keeper1.address)).to.equal(-1);
+            expect(await mockReputation.getIReputationPoint(requestHash, keeper2.address)).to.equal(1);
+            expect(await mockReputation.getIReputationPoint(requestHash, keeper3.address)).to.equal(2);
         });
 
         it("Connectivity Test: first transformReputation last calimToken", async function () {
@@ -243,9 +243,9 @@ describe('Reputation Contract API', function () {
 
         it("claimToken(bytes32,address): bad and good keeper successfully claim", async function () {
             // check individualReputation
-            expect(await mockReputation.getIRutationPoint(requestHash, keeper1.address)).to.equal(-1);
-            expect(await mockReputation.getIRutationPoint(requestHash, keeper2.address)).to.equal(1);
-            expect(await mockReputation.getIRutationPoint(requestHash, keeper3.address)).to.equal(2);
+            expect(await mockReputation.getIReputationPoint(requestHash, keeper1.address)).to.equal(-1);
+            expect(await mockReputation.getIReputationPoint(requestHash, keeper2.address)).to.equal(1);
+            expect(await mockReputation.getIReputationPoint(requestHash, keeper3.address)).to.equal(2);
 
             // keeper claimToken
             await mockReputation.connect(keeper1).claimToken(requestHash, MTKA.address);
