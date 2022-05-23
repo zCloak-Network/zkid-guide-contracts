@@ -26,7 +26,7 @@ const {
     submitInfo
 } = require("../testVariables");
 
-describe("AuthControl Test", function () {
+describe("AuthControl Test", () => {
     let registry;
     let property;
     let addressesUtils;
@@ -51,7 +51,7 @@ describe("AuthControl Test", function () {
     let requestHash;
     let kiltAccountOther = ethers.utils.formatBytes32String("kiltAccountOther");
 
-    beforeEach(async function () {
+    beforeEach(async () => {
         [owner, user1, project, keeper1, keeper2, keeper3] = await ethers.getSigners();
         keepers = [keeper1.address, keeper2.address, keeper3.address];
 
@@ -94,8 +94,8 @@ describe("AuthControl Test", function () {
         await addProof(proof, user1, proofInfo);
     });
 
-    describe("SimpleAggregator", function () {
-        it("submit(...) auth {}: src == owner", async function() {
+    describe("SimpleAggregator", () => {
+        it("submit(...) auth {}: src == owner", async () => {
             // authority != IAuthority(address(0)) && authority.canCall() return false
             expect(await mockSAggregator.authority()).to.equal(sAggregatorAuth.address);
 
@@ -110,7 +110,7 @@ describe("AuthControl Test", function () {
             expect(await mockSAggregator.getVoterAddress(user1.address, requestHash, outputHash, 0)).to.equal(owner.address);
         });
 
-        it("submit(...) auth {}: authority.canCall() return true", async function() {
+        it("submit(...) auth {}: authority.canCall() return true", async () => {
             // src != owner && authority != IAuthority(address(0))
             expect(await mockSAggregator.authority()).to.equal(sAggregatorAuth.address);
 
@@ -126,7 +126,7 @@ describe("AuthControl Test", function () {
 
         });
 
-        it("zkID(...) auth {}: src == owner", async function () {
+        it("zkID(...) auth {}: src == owner", async () => {
             // authority != IAuthority(address(0)) && authority.canCall() return false
             await registry.setAddressProperty(property.CONTRACT_READ_GATEWAY(), blankBytes20);
             expect(await registry.addressOf(property.CONTRACT_READ_GATEWAY())).to.equal(blankBytes20);
@@ -148,7 +148,7 @@ describe("AuthControl Test", function () {
             expect((ethers.BigNumber.from(calcOutput[0])).toNumber()).to.equal(submitInfo.expectResult[0]);
         });
 
-        it("zkID(...) auth {}: authority.canCall() return true", async function () {
+        it("zkID(...) auth {}: authority.canCall() return true", async () => {
             // src != owner && authority != IAuthority(address(0))
             expect(await mockSAggregator.authority()).to.equal(sAggregatorAuth.address);
 
@@ -170,7 +170,7 @@ describe("AuthControl Test", function () {
             expect((ethers.BigNumber.from(calcOutput[0])).toNumber()).to.equal(submitInfo.expectResult[0]);
         });
 
-        it("clear(...) auth {}: src == owner", async function () {
+        it("clear(...) auth {}: src == owner", async () => {
             // authority != IAuthority(address(0)) && authority.canCall() return false
             await registry.setAddressProperty(property.CONTRACT_MAIN_KILT(), blankBytes20);
             expect(await registry.addressOf(property.CONTRACT_MAIN_KILT())).to.equal(blankBytes20);
@@ -191,7 +191,7 @@ describe("AuthControl Test", function () {
             expect(await mockSAggregator.getFinalOHash(user1.address, requestHash)).to.equal(blankBytes32);
         });
 
-        it("clear(...) auth {}: authority.canCall() return true", async function () {
+        it("clear(...) auth {}: authority.canCall() return true", async () => {
             // src != owner && authority != IAuthority(address(0))
             expect(await mockSAggregator.authority()).to.equal(sAggregatorAuth.address);
 
@@ -209,17 +209,17 @@ describe("AuthControl Test", function () {
         });
     });
 
-    describe("RAC", function () {
+    describe("RAC", () => {
         let requestHashOther;
         let fee;
 
-        beforeEach(async function () {
+        beforeEach(async () => {
             // variable setting
             requestHashOther = await rac.getRequestHash({ cType: cType, fieldNames: fieldName, programHash: newProgramHash, attester: attester });
             fee = ethers.utils.parseEther('2.0');
         });
 
-        it("initializeRequest(...) auth {}: src == owner", async function () {
+        it("initializeRequest(...) auth {}: src == owner", async () => {
             // authority != IAuthority(address(0)) && authority.canCall() return false
             await registry.setAddressProperty(property.CONTRACT_MAIN_KILT(), blankBytes20);
             expect(await registry.addressOf(property.CONTRACT_MAIN_KILT())).to.equal(blankBytes20);
@@ -241,7 +241,7 @@ describe("AuthControl Test", function () {
             expect((await rac.requestInfo(requestHashOther)).attester).to.equal(attester);
         });
 
-        it("initializeRequest(...) auth {}: authority.canCall() return true", async function () {
+        it("initializeRequest(...) auth {}: authority.canCall() return true", async () => {
             // src != owner && authority != IAuthority(address(0))
             expect(await rac.authority()).to.equal(racAuth.address);
 
