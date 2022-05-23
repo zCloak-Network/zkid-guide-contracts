@@ -1,5 +1,5 @@
 const { ethers } = require('hardhat');
-const { expect, should } = require('chai');
+const { expect } = require('chai');
 
 const {
     submit,
@@ -17,8 +17,6 @@ const {
     newProgramHash,
     rootHash,
     expectResult,
-    isPassed_t,
-    isPassed_f,
     blankBytes20,
     blankBytes32,
     attester,
@@ -244,12 +242,8 @@ describe("AuthControl Test", function () {
         });
 
         it("initializeRequest(...) auth {}: authority.canCall() return true", async function () {
-            // TODO: start reconstruct
             // src != owner && authority != IAuthority(address(0))
-            expect(await mockSAggregator.authority()).to.equal(sAggregatorAuth.address);
-            
-            // proofInfo.programHash = newProgramHash;
-            // await addProof(proof, user1, proofInfo);
+            expect(await rac.authority()).to.equal(racAuth.address);
 
             // should fail if _src != proofStorage
             await registry.setAddressProperty(property.CONTRACT_MAIN_KILT(), blankBytes20);
@@ -260,39 +254,44 @@ describe("AuthControl Test", function () {
             // should success if _src == proofStorage
             await registry.setAddressProperty(property.CONTRACT_MAIN_KILT(), proof.address);
             expect(await registry.addressOf(property.CONTRACT_MAIN_KILT())).to.equal(proof.address);
-            // await rac.connect(user1).initializeRequest({ cType: cType, fieldNames: fieldName, programHash: newProgramHash, attester: attester });
+            
+            proofInfo.programHash = newProgramHash;
+            await addProof(proof, user1, proofInfo);
 
             // reset programHash
             proofInfo.programHash = programHash;
         });
 
         it("applyRequest(...) onlyOwner {}: msg.sender must be owner", async () => {
-            // only owner can call applyRequest
-            await rac.connect(owner).applyRequest(requestHash, project.address, token.address, fee);
-            expect((await rac.applied(requestHash, project.address)).token).to.equal(token.address);
-
+            // should fail if msg.sender != owner
             await expect(rac.connect(user1).applyRequest(requestHash, project.address, token.address, fee))
                 .to.be.reverted;
+
+            // should success if msg.sender == owner
+            await rac.connect(owner).applyRequest(requestHash, project.address, token.address, fee);
+            expect((await rac.applied(requestHash, project.address)).token).to.equal(token.address);
         });
 
         it("superAuth(...) onlyOwner {}: msg.sender must be owner", async () => {
-            // only owner can call superAuth
+            // should fail if msg.sender != owner
+            await expect(rac.connect(user1).superAuth(user1.address, true)).to.be.reverted;
+
+            // should success if msg.sender == owner
             await rac.connect(owner).superAuth(user1.address, true);
             expect(await rac.superior(user1.address)).to.equal(true);
-
-            await expect(rac.connect(user1).superAuth(user1.address, true)).to.be.reverted;
         });
 
         it("zkID(...) accessAllowed {}: applied[][].perVisitFee != 0", async () => {
-            // superior[owner] == false && _caller != address(this)
-            expect(await rac.superior(owner.address)).to.equal(false);
+            // superior[_caller] != false && _caller != address(this)
+            expect(await rac.superior(project.address)).to.equal(false);
 
-            // keeper submit verification
+            // keeper submit verification first
             await submit(mockSAggregator, [keeper1, keeper2, keeper3], user1, requestHash, [false, true, true], submitInfo);
 
-            // should fail because applied[][].perVisitFee == 0 (not set Meter)
+            // should fail if applied[][].perVisitFee == 0 (not set Meter)
             await expect(rac.connect(project).zkID(user1.address, requestHash)).to.be.revertedWith("No Access");
 
+            // should success if applied[][].perVisitFee != 0
             // set Meter first
             await rac.connect(owner).applyRequest(requestHash, project.address, token.address, fee);
             expect((await rac.applied(requestHash, project.address)).perVisitFee).to.equal(fee);
@@ -307,13 +306,14 @@ describe("AuthControl Test", function () {
             // applied[_requestHash][_caller].perVisitFee == 0 && _caller != address(this)
             expect(await rac.applied(requestHash, project.address).perVisitFee).to.equal(undefined);
 
-            // keeper submit verification
+            // keeper submit verification first
             await submit(mockSAggregator, [keeper1, keeper2, keeper3], user1, requestHash, [false, true, true], submitInfo);
 
-            // should fail because superior[_caller] == fale (not set superAuth for project)
+            // should fail if superior[_caller] == false (not set superAuth for project)
             expect(await rac.superior(project.address)).to.equal(false);
             await expect(rac.connect(project).zkID(user1.address, requestHash)).to.be.revertedWith("No Access");
 
+            // should success if superior[_caller] == true
             // set superAuth for project
             await rac.connect(owner).superAuth(project.address, true);
             expect(await rac.superior(project.address)).to.equal(true);
@@ -342,11 +342,10 @@ describe("AuthControl Test", function () {
         });
 
         it("addToken(...) onlyOwner {}: msg.sender must be owner", async () => {
-            // other caller to call addToken
+            // should fail if msg.sender != owner
             await expect(mockReputation.connect(keeper1).addToken(requestHash, token.address)).to.be.reverted;
 
-            // only owner can call addToken
-            await mockReputation.connect(owner).addToken(requestHash, token.address);
+            // should success if msg.sender == owner
             await expect(mockReputation.connect(owner).addToken(requestHash, token.address))
                 .to.emit(mockReputation, 'Add')
                 .withArgs(token.address, owner.address);
@@ -354,14 +353,16 @@ describe("AuthControl Test", function () {
         });
 
         it("punish(...) auth {}: src == owner", async () => {
-            // authority != IAuthority(address(0)) && authority.canCall return false
+            // authority != IAuthority(address(0)) && authority.canCall() return false
+            expect(await mockReputation.authority()).to.equal(reputationAuth.address);
+
             // should fail if src != owner
             await expect(mockReputation.connect(user1).punish(requestHash, keeper1.address))
                 .to.be.revertedWith("Auth: you can not pass authorization verification");
 
-            // src == owner
+            // should success if src == owner
             // @ notice Cannot call punish() directlly
-            // totalPoints[_requestHash] is uint256 type, uint cannot be nagative
+            // The type of totalPoints[_requestHash] is uint256, uint cannot be nagative
             // (totalPoints[_requestHash] -= (2 * POINT)).
         });
 
@@ -369,10 +370,9 @@ describe("AuthControl Test", function () {
             // src != owner && authority != IAuthority(address(0))
             expect(await mockReputation.authority()).to.equal(reputationAuth.address);
 
-            // keeper submit (threshold is 3)
+            // keeper submit (threshold is 2)
             await submit(mockSAggregator, [keeper1, keeper2], user1, requestHash, [false, true], submitInfo);
 
-            // watch value which authority.canCall() returns
             // should fail if _src != aggregator
             await registry.setAddressProperty(property.CONTRACT_AGGREGATOR(), blankBytes20);
             await expect(submit(mockSAggregator, [keeper3], user1, requestHash, [true], submitInfo))
@@ -415,7 +415,7 @@ describe("AuthControl Test", function () {
             await expect(mockReputation.connect(keeper1).reward(requestHash, keeper1.address))
                 .to.be.revertedWith("Auth: you can not pass authorization verification");
 
-            // should success if _src == aggregator && _srg == IReputation.reward.selector
+            // should success if _src == aggregator
             await registry.setAddressProperty(property.CONTRACT_AGGREGATOR(), mockSAggregator.address);
             await submit(mockSAggregator, [keeper1], user1, requestHash, [true], submitInfo);
             expect(await mockReputation.getCReputations(requestHash, keeper1.address)).to.equal(1);
