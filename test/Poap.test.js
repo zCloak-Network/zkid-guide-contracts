@@ -129,6 +129,10 @@ describe("Poap", function () {
         it('claim(): call claim successfully', async function () {
             await poap.connect(user1).claim();
             expect(await poap.totalBalanceOf(popaIdendifier, user1.address)).to.equal(1);
+
+            // should fail if same user claim again
+            await expect(poap.connect(user1).claim())
+                .to.be.revertedWith("You have already minted");
         });
 
         it("pause(): should revert if calling factory.pause", async function () {
