@@ -3,6 +3,8 @@ require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ganache");
 require("@nomiclabs/hardhat-truffle5");
 require("hardhat-log-remover");
+require("solidity-coverage");
+require("hardhat-gas-reporter");
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -29,6 +31,10 @@ const {
   privateKeyKeeper1,
   privateKeyKeeper2,
   privateKeyKeeper3,
+  privateKeyKeeper4,
+  privateKeyKeeper5,
+  privateKeyKeeper6,
+  privateKeyKeeper7,
   privateKeyTransferer
 } = require('./secrets.json');
 //import { privateKeyKovan, privateKeyMoonbase } from "./secrets.json";
@@ -38,7 +44,7 @@ const {
  */
 module.exports = {
   solidity: {
-    version: "0.8.0",
+    version: "0.8.5",
     settings: {
       optimizer: {
         enabled: true,
@@ -69,6 +75,10 @@ module.exports = {
         privateKeyKeeper1,
         privateKeyKeeper2,
         privateKeyKeeper3,
+        privateKeyKeeper4,
+        privateKeyKeeper5,
+        privateKeyKeeper6,
+        privateKeyKeeper7,
         privateKeyTransferer
       ] // Insert your private key here
     },
@@ -78,5 +88,11 @@ module.exports = {
       chainId: 1285, //(hex: 0x505),
       //accounts: [privateKeyMoonriver] // Insert your private key here
     },
+  },
+
+  gasReporter: {
+    // Turn on gas_reporter if you want to ues it (false => true).
+    // default is false
+    enabled: (process.env.REPORT_GAS) ? true : false
   }
 };

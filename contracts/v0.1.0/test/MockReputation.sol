@@ -22,7 +22,7 @@ contract MockReputation is Reputation {
         return communityReputations[requestHash][keeper];
     }
 
-    function getIRutationPoint(bytes32 requestHash, address keeper)
+    function getIReputationPoint(bytes32 requestHash, address keeper)
         public
         view
         returns (int128)
@@ -47,6 +47,14 @@ contract MockReputation is Reputation {
         returns (uint256)
     {
         return rewardPool[requestHash][token];
+    }
+
+    function getRemainingAssets(bytes32 requestHash, address asset)
+        public
+        view
+        returns (uint256)
+    {
+        return remainingAssets[requestHash][asset];
     }
 
     function getToken(bytes32 requestHash, uint256 index)
